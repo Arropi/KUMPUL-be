@@ -1,9 +1,33 @@
 import express, { type Express, type Request, type Response } from 'express';
+import cors from 'cors';
+import 'dotenv/config';
+import { connect_to_db } from './middleware/db-middleware';
+import { error_middleware } from './middleware/error-middleware';
 
+const DEFAULT_PORT = 3000;
+const server_port = process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;
 const app: Express = express();
 
-app.get('/', (req: Request, res: Response) => {
-  res.send('Hello World!');
+// Middleware dasar aplikasi
+app.use(cors());
+app.use(express.json());
+
+// Pengkoneksian sekali ke database melalui middleware
+app.use(connect_to_db());
+
+// Endpoint pemeriksaan kesehatan (health check)
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    status: 'success',
+    message: 'KUMPUL Backend API berjalan dengan baik',
+    database_status: 'connected',
+  });
 });
 
-app.listen(3000);
+// Middleware penanganan error global terpusat
+app.use(error_middleware);
+
+// Menjalankan server
+app.listen(server_port, () => {
+  console.log(`🚀 Server aktif dan berjalan di http://localhost:${server_port}`);
+});
