@@ -3,9 +3,10 @@ import cors from 'cors';
 import 'dotenv/config';
 import { connect_to_db } from './middleware/db-middleware';
 import { error_middleware } from './middleware/error-middleware';
-import business_entity_router from './routes/accounts/business-entity-route';
-import business_role_router from './routes/accounts/business-role-route';
+import auth_router from './routes/auth/auth-route';
+import business_router from './routes/accounts/index';
 import supplier_catalog_router from './routes/products/supplier-catalog-route';
+import commodity_batch_tag_router from './routes/products/commodity-batch-tag-route';
 
 const DEFAULT_PORT = 3000;
 const server_port = process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;
@@ -28,8 +29,8 @@ app.get('/', (_req: Request, res: Response) => {
 });
 
 // Pendaftaran route API
-app.use('/api/business-entities', business_entity_router);
-app.use('/api/business-roles', business_role_router);
+app.use('/api/auth', auth_router);
+app.use('/api/business', business_router);
 app.use('/api/supplier-catalogs', supplier_catalog_router);
 
 // Middleware penanganan error global terpusat

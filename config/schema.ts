@@ -137,7 +137,7 @@ export const business_roles = pgTable('business_roles', {
     .references(() => business_entities.id)
     .notNull(),
   role_type: role_type_enum('role_type').notNull(),
-  sector_type: sector_type_enum('sector_type').notNull(),
+  sector_type: sector_type_enum('sector_type'),
   storage_capacity: integer('storage_capacity').default(0).notNull(),
   is_active: boolean('is_active').default(true),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -164,8 +164,18 @@ export const supplier_commodities = pgTable('supplier_commodities', {
   name: varchar('name').notNull(),
   sku: varchar('sku').notNull(),
   wholesale_unit: wholesale_unit_enum('wholesale_unit').notNull(),
+  base_price: numeric('base_price').notNull(),
+  stock: numeric('stock').default('0.00').notNull(),
   base_moq: numeric('base_moq').notNull(),
   lead_time_days: integer('lead_time_days').default(1).notNull(),
+  image_url: text('image_url'),
+  description: text('description'),
+  estimated_harvest_date: date('estimated_harvest_date'),
+  auto_activate_marketplace: boolean('auto_activate_marketplace')
+    .default(false)
+    .notNull(),
+  allows_under_moq: boolean('allows_under_moq').default(false).notNull(),
+  under_moq_price_per_kg: numeric('under_moq_price_per_kg'),
   is_marketplace_active: boolean('is_marketplace_active').default(true),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
@@ -194,6 +204,7 @@ export const commodity_batch_tags = pgTable('commodity_batch_tags', {
   storage_temperature_type: storage_temp_enum('storage_temperature_type')
     .default('AMBIENT')
     .notNull(),
+  is_verified: boolean('is_verified').default(false).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 

@@ -1,4 +1,4 @@
-import { eq, and, desc, type SQL } from 'drizzle-orm';
+import { eq, and, desc, isNull, type SQL } from 'drizzle-orm';
 import { db } from '../../config/db';
 import { business_roles, business_entities } from '../../config/schema';
 import type {
@@ -61,8 +61,12 @@ export const find_role_with_entity_by_id = async (role_id: string) => {
 export const find_duplicate_role = async (
   entity_id: string,
   role_type: RoleType,
-  sector_type: SectorType
+  sector_type?: SectorType | null
 ): Promise<BusinessRoleRecord | null> => {
+  const sector_condition = sector_type
+    ? eq(business_roles.sector_type, sector_type)
+    : isNull(business_roles.sector_type);
+
   const records = await db
     .select()
     .from(business_roles)
@@ -70,7 +74,7 @@ export const find_duplicate_role = async (
       and(
         eq(business_roles.entity_id, entity_id),
         eq(business_roles.role_type, role_type),
-        eq(business_roles.sector_type, sector_type)
+        sector_condition
       )
     )
     .limit(1);
@@ -151,4 +155,23 @@ export const delete_business_role_by_id = async (
     .returning({ id: business_roles.id });
 
   return deleted_records.length > 0;
+};
+
+export const find_active_role_by_entity_and_type = async (
+  entity_id: string,
+  role_type: RoleType
+): Promise<BusinessRoleRecord | null> => {
+  const records = await db
+    .select()
+    .from(business_roles)
+    .where(
+      and(
+        eq(business_roles.entity_id, entity_id),
+        eq(business_roles.role_type, role_type),
+        eq(business_roles.is_active, true)
+      )
+    )
+    .limit(1);
+
+  return records[0] ?? null;
 };

@@ -30,6 +30,18 @@ export const find_entity_by_npwp = async (
   return records[0] ?? null;
 };
 
+export const find_entity_by_auth_user_id = async (
+  auth_user_id: string
+): Promise<BusinessEntityRecord | null> => {
+  const records = await db
+    .select()
+    .from(business_entities)
+    .where(eq(business_entities.auth_user_id, auth_user_id))
+    .limit(1);
+
+  return records[0] ?? null;
+};
+
 export const find_entities_list = async (
   limit_count = 20,
   offset_count = 0

@@ -97,7 +97,6 @@ router.get('/:id', get_business_role_by_id_validation, get_business_role_by_id);
  *             required:
  *               - entity_id
  *               - role_type
- *               - sector_type
  *             properties:
  *               entity_id:
  *                 type: string

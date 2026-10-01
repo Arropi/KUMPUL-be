@@ -19,10 +19,20 @@ const create_role_schema = z.object({
   role_type: z.enum(role_type_values, {
     message: 'role_type harus salah satu dari: SUPPLIER, UMKM',
   }),
-  sector_type: z.enum(sector_type_values, {
-    message:
-      'sector_type harus salah satu dari: PERTANIAN, PETERNAKAN, PERIKANAN, PERKEBUNAN, FNB_PENGOLAHAN, RITEL, LOGISTIK',
-  }),
+  sector_type: z
+    .enum(sector_type_values, {
+      message:
+        'sector_type harus salah satu dari: PERTANIAN, PETERNAKAN, PERIKANAN, PERKEBUNAN, FNB_PENGOLAHAN, RITEL, LOGISTIK',
+    })
+    .nullable()
+    .optional(),
+  sector: z
+    .enum(sector_type_values, {
+      message:
+        'sector harus salah satu dari: PERTANIAN, PETERNAKAN, PERIKANAN, PERKEBUNAN, FNB_PENGOLAHAN, RITEL, LOGISTIK',
+    })
+    .nullable()
+    .optional(),
   storage_capacity: z
     .number({ message: 'storage_capacity harus berupa angka' })
     .int({ message: 'storage_capacity harus berupa bilangan bulat' })
@@ -37,6 +47,14 @@ const update_role_schema = z.object({
       message:
         'sector_type harus salah satu dari: PERTANIAN, PETERNAKAN, PERIKANAN, PERKEBUNAN, FNB_PENGOLAHAN, RITEL, LOGISTIK',
     })
+    .nullable()
+    .optional(),
+  sector: z
+    .enum(sector_type_values, {
+      message:
+        'sector harus salah satu dari: PERTANIAN, PETERNAKAN, PERIKANAN, PERKEBUNAN, FNB_PENGOLAHAN, RITEL, LOGISTIK',
+    })
+    .nullable()
     .optional(),
   storage_capacity: z
     .number({ message: 'storage_capacity harus berupa angka' })

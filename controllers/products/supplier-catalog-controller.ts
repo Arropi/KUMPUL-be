@@ -18,9 +18,18 @@ export const create_supplier_commodity = async (
       supplier_role_id: req.body.supplier_role_id,
       name: req.body.name,
       wholesale_unit: req.body.wholesale_unit,
+      base_price: req.body.base_price,
+      stock: req.body.stock,
       base_moq: req.body.base_moq,
       lead_time_days: req.body.lead_time_days,
+      image_url: req.body.image_url,
+      description: req.body.description,
+      estimated_harvest_date: req.body.estimated_harvest_date,
+      auto_activate_marketplace: req.body.auto_activate_marketplace,
+      allows_under_moq: req.body.allows_under_moq,
+      under_moq_price_per_kg: req.body.under_moq_price_per_kg,
       is_marketplace_active: req.body.is_marketplace_active,
+      price_tiers: req.body.price_tiers,
     };
 
     const created_item = await create_supplier_commodity_service(formatted_payload);
@@ -98,9 +107,18 @@ export const update_supplier_commodity = async (
     const formatted_update_payload = {
       name: req.body.name,
       wholesale_unit: req.body.wholesale_unit,
+      base_price: req.body.base_price,
+      stock: req.body.stock,
       base_moq: req.body.base_moq,
       lead_time_days: req.body.lead_time_days,
+      image_url: req.body.image_url,
+      description: req.body.description,
+      estimated_harvest_date: req.body.estimated_harvest_date,
+      auto_activate_marketplace: req.body.auto_activate_marketplace,
+      allows_under_moq: req.body.allows_under_moq,
+      under_moq_price_per_kg: req.body.under_moq_price_per_kg,
       is_marketplace_active: req.body.is_marketplace_active,
+      price_tiers: req.body.price_tiers,
     };
 
     const updated_item = await update_supplier_commodity_service(

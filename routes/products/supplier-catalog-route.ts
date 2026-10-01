@@ -11,9 +11,11 @@ import {
   update_supplier_commodity_validation,
   get_supplier_commodity_by_id_validation,
 } from '../../validations/products/supplier-catalog-validation';
+import commodity_batch from "./commodity-batch-tag-route"
 
 const router = Router();
 
+router.use("/batch",commodity_batch )
 /**
  * @swagger
  * /api/supplier-catalogs:
@@ -84,6 +86,8 @@ router.get('/:id', get_supplier_commodity_by_id_validation, get_supplier_commodi
  *               - supplier_role_id
  *               - name
  *               - wholesale_unit
+ *               - base_price
+ *               - stock
  *               - base_moq
  *             properties:
  *               supplier_role_id:
@@ -92,23 +96,78 @@ router.get('/:id', get_supplier_commodity_by_id_validation, get_supplier_commodi
  *                 example: "11111111-2222-3333-4444-555555555555"
  *               name:
  *                 type: string
- *                 example: "beras 20 Kg"
+ *                 example: "Beras Rojolele 20 Kg"
  *               wholesale_unit:
  *                 type: string
  *                 enum: [KARUNG, SAK, KRAT, PAX, BAL]
  *                 example: "KARUNG"
+ *               base_price:
+ *                 type: number
+ *                 example: 250000
+ *                 description: Harga utama per wholesale unit
+ *               stock:
+ *                 type: number
+ *                 example: 100
+ *                 description: Kuantitas stok komoditas yang tersedia
  *               base_moq:
  *                 type: number
- *                 example: 50
+ *                 example: 20
+ *                 description: Minimum order quantity dalam wholesale unit
  *               lead_time_days:
  *                 type: integer
  *                 example: 2
+ *               image_url:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "https://example.com/images/beras.jpg"
+ *               description:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "Beras pulen berkualitas super langsung dari petani Klaten."
+ *               estimated_harvest_date:
+ *                 type: string
+ *                 format: date
+ *                 nullable: true
+ *                 example: "2026-10-15"
+ *                 description: Perkiraan tanggal panen/produksi (YYYY-MM-DD)
+ *               auto_activate_marketplace:
+ *                 type: boolean
+ *                 example: true
+ *                 description: Otomatis mengaktifkan marketplace ketika memasuki tanggal panen
+ *               allows_under_moq:
+ *                 type: boolean
+ *                 example: true
+ *                 description: Menentukan apakah menerima pemesanan di bawah MOQ
+ *               under_moq_price_per_kg:
+ *                 type: number
+ *                 nullable: true
+ *                 example: 15000
+ *                 description: Harga per kg jika pembeli memesan di bawah MOQ (wajib jika allows_under_moq bernilai true)
  *               is_marketplace_active:
  *                 type: boolean
  *                 example: true
+ *               price_tiers:
+ *                 type: array
+ *                 description: Tiering harga grosir bertingkat
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - min_qty
+ *                     - max_qty
+ *                     - tier_price
+ *                   properties:
+ *                     min_qty:
+ *                       type: number
+ *                       example: 20
+ *                     max_qty:
+ *                       type: number
+ *                       example: 50
+ *                     tier_price:
+ *                       type: number
+ *                       example: 240000
  *     responses:
  *       201:
- *         description: Komoditas katalog berhasil ditambahkan dengan SKU otomatis
+ *         description: Komoditas katalog berhasil ditambahkan dengan SKU otomatis dan tier harga
  *       400:
  *         description: Validasi input gagal atau role bukan SUPPLIER
  *       404:
@@ -141,12 +200,44 @@ router.post('/', create_supplier_commodity_validation, create_supplier_commodity
  *               wholesale_unit:
  *                 type: string
  *                 enum: [KARUNG, SAK, KRAT, PAX, BAL]
+ *               base_price:
+ *                 type: number
+ *               stock:
+ *                 type: number
  *               base_moq:
  *                 type: number
  *               lead_time_days:
  *                 type: integer
+ *               image_url:
+ *                 type: string
+ *                 nullable: true
+ *               description:
+ *                 type: string
+ *                 nullable: true
+ *               estimated_harvest_date:
+ *                 type: string
+ *                 format: date
+ *                 nullable: true
+ *               auto_activate_marketplace:
+ *                 type: boolean
+ *               allows_under_moq:
+ *                 type: boolean
+ *               under_moq_price_per_kg:
+ *                 type: number
+ *                 nullable: true
  *               is_marketplace_active:
  *                 type: boolean
+ *               price_tiers:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     min_qty:
+ *                       type: number
+ *                     max_qty:
+ *                       type: number
+ *                     tier_price:
+ *                       type: number
  *     responses:
  *       200:
  *         description: Komoditas katalog berhasil diperbarui

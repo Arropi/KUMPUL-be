@@ -1,9 +1,15 @@
-import { eq, like, desc } from 'drizzle-orm';
+import { eq, like, desc, inArray, and, sql } from 'drizzle-orm';
 import { db } from '../../config/db';
-import { supplier_commodities, business_roles } from '../../config/schema';
+import {
+  supplier_commodities,
+  commodity_price_tiers,
+  business_roles,
+} from '../../config/schema';
 import type {
   SupplierCommodityRecord,
   SupplierCommodityInsertPayload,
+  CommodityPriceTierRecord,
+  CommodityPriceTierInsertPayload,
 } from '../../types/supplier-catalog-types';
 import type { BusinessRole } from '../../types/database-types';
 
@@ -126,3 +132,83 @@ export const delete_commodity_by_id = async (
 
   return deleted_records.length > 0;
 };
+
+export const insert_commodity_price_tiers = async (
+  insert_payloads: CommodityPriceTierInsertPayload[]
+): Promise<CommodityPriceTierRecord[]> => {
+  if (insert_payloads.length === 0) {
+    return [];
+  }
+  const inserted_tiers = await db
+    .insert(commodity_price_tiers)
+    .values(insert_payloads)
+    .returning();
+
+  return inserted_tiers;
+};
+
+export const find_price_tiers_by_commodity_id = async (
+  commodity_id: string
+): Promise<CommodityPriceTierRecord[]> => {
+  const tiers = await db
+    .select()
+    .from(commodity_price_tiers)
+    .where(eq(commodity_price_tiers.commodity_id, commodity_id))
+    .orderBy(commodity_price_tiers.min_qty);
+
+  return tiers;
+};
+
+export const find_price_tiers_by_commodity_ids = async (
+  commodity_ids: string[]
+): Promise<Record<string, CommodityPriceTierRecord[]>> => {
+  if (commodity_ids.length === 0) {
+    return {};
+  }
+  const tier_records = await db
+    .select()
+    .from(commodity_price_tiers)
+    .where(inArray(commodity_price_tiers.commodity_id, commodity_ids))
+    .orderBy(commodity_price_tiers.min_qty);
+
+  const tiers_by_commodity_id: Record<string, CommodityPriceTierRecord[]> = {};
+  for (const tier_item of tier_records) {
+    const commodity_tier_list = tiers_by_commodity_id[tier_item.commodity_id] ?? [];
+    commodity_tier_list.push(tier_item);
+    tiers_by_commodity_id[tier_item.commodity_id] = commodity_tier_list;
+  }
+
+  return tiers_by_commodity_id;
+};
+
+export const delete_price_tiers_by_commodity_id = async (
+  commodity_id: string
+): Promise<boolean> => {
+  const deleted_tiers = await db
+    .delete(commodity_price_tiers)
+    .where(eq(commodity_price_tiers.commodity_id, commodity_id))
+    .returning({ id: commodity_price_tiers.id });
+
+  return deleted_tiers.length > 0;
+};
+
+export const activate_due_harvest_commodities = async (): Promise<number> => {
+  const current_date_string = new Date().toISOString().slice(0, 10);
+  const activated_rows = await db
+    .update(supplier_commodities)
+    .set({
+      is_marketplace_active: true,
+      updated_at: new Date(),
+    })
+    .where(
+      and(
+        eq(supplier_commodities.auto_activate_marketplace, true),
+        eq(supplier_commodities.is_marketplace_active, false),
+        sql`${supplier_commodities.estimated_harvest_date} <= ${current_date_string}::date`
+      )
+    )
+    .returning({ id: supplier_commodities.id });
+
+  return activated_rows.length;
+};
+
