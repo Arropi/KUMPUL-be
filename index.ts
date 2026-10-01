@@ -32,6 +32,7 @@ app.get('/', (_req: Request, res: Response) => {
 app.use('/api/auth', auth_router);
 app.use('/api/business', business_router);
 app.use('/api/supplier-catalogs', supplier_catalog_router);
+app.use('/api/commodity-batch-tags', commodity_batch_tag_router);
 
 // Middleware penanganan error global terpusat
 app.use(error_middleware);
