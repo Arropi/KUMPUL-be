@@ -13,6 +13,8 @@ import {
   find_price_tiers_by_commodity_ids,
   delete_price_tiers_by_commodity_id,
   activate_due_harvest_commodities,
+  find_entity_by_id,
+  find_commodities_by_entity_id,
 } from '../../repositories/products/supplier-catalog-repositories';
 import { generate_sku_from_name } from '../../utils/sku-utils';
 import { AppError } from '../../middleware/error-middleware';
@@ -208,12 +210,12 @@ export const create_supplier_commodity_service = async (
 
   // 6. Logika otomatisasi is_marketplace_active berdasarkan perkiraan tanggal panen/produksi
   const should_auto_activate = payload.auto_activate_marketplace ?? false;
-  const estimated_date_val = payload.estimated_harvest_date ?? null;
+  const production_date_val = payload.production_date ?? null;
   let initial_marketplace_active: boolean;
 
-  if (should_auto_activate && estimated_date_val) {
+  if (should_auto_activate && production_date_val) {
     const current_date_string = new Date().toISOString().slice(0, 10);
-    initial_marketplace_active = estimated_date_val <= current_date_string;
+    initial_marketplace_active = production_date_val <= current_date_string;
   } else {
     initial_marketplace_active = payload.is_marketplace_active ?? true;
   }
@@ -240,7 +242,7 @@ export const create_supplier_commodity_service = async (
     lead_time_days: payload.lead_time_days ?? 1,
     image_url: payload.image_url ?? null,
     description: payload.description ? payload.description.trim() : null,
-    estimated_harvest_date: estimated_date_val,
+    production_date: production_date_val,
     auto_activate_marketplace: should_auto_activate,
     allows_under_moq: is_under_moq_allowed,
     under_moq_price_per_kg: formatted_under_moq_price,
@@ -430,14 +432,14 @@ export const update_supplier_commodity_service = async (
   let updated_marketplace_active = payload.is_marketplace_active;
   const target_auto_activate =
     payload.auto_activate_marketplace ?? existing_item.auto_activate_marketplace;
-  const target_harvest_date =
-    payload.estimated_harvest_date !== undefined
-      ? payload.estimated_harvest_date
-      : existing_item.estimated_harvest_date;
+  const target_production_date =
+    payload.production_date !== undefined
+      ? payload.production_date
+      : existing_item.production_date;
 
-  if (target_auto_activate && target_harvest_date && payload.is_marketplace_active === undefined) {
+  if (target_auto_activate && target_production_date && payload.is_marketplace_active === undefined) {
     const current_date_string = new Date().toISOString().slice(0, 10);
-    updated_marketplace_active = target_harvest_date <= current_date_string;
+    updated_marketplace_active = target_production_date <= current_date_string;
   }
 
   const update_payload = {
@@ -451,8 +453,8 @@ export const update_supplier_commodity_service = async (
     ...(payload.description !== undefined
       ? { description: payload.description ? payload.description.trim() : null }
       : {}),
-    ...(payload.estimated_harvest_date !== undefined
-      ? { estimated_harvest_date: payload.estimated_harvest_date }
+    ...(payload.production_date !== undefined
+      ? { production_date: payload.production_date }
       : {}),
     ...(payload.auto_activate_marketplace !== undefined
       ? { auto_activate_marketplace: payload.auto_activate_marketplace }
@@ -513,4 +515,26 @@ export const delete_supplier_commodity_service = async (
   if (!is_deleted) {
     throw new AppError('Gagal menghapus komoditas katalog', 500, 'DELETE_FAILED');
   }
+};
+
+export const get_commodities_by_entity_id_service = async (
+  entity_id: string
+): Promise<SupplierCommodityWithTiers[]> => {
+  const existing_entity = await find_entity_by_id(entity_id);
+  if (!existing_entity) {
+    throw new AppError('Entitas bisnis tidak ditemukan', 404, 'ENTITY_NOT_FOUND');
+  }
+
+  const commodities = await find_commodities_by_entity_id(entity_id);
+  if (commodities.length === 0) {
+    return [];
+  }
+
+  const commodity_ids = commodities.map((item) => item.id);
+  const tiers_by_commodity = await find_price_tiers_by_commodity_ids(commodity_ids);
+
+  return commodities.map((commodity_item) => ({
+    ...commodity_item,
+    price_tiers: tiers_by_commodity[commodity_item.id] || [],
+  }));
 };

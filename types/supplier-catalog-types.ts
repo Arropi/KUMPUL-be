@@ -23,7 +23,7 @@ export interface CreateSupplierCommodityDTO {
   lead_time_days?: number;
   image_url?: string | null;
   description?: string | null;
-  estimated_harvest_date?: string | null;
+  production_date?: string | null;
   auto_activate_marketplace?: boolean;
   allows_under_moq?: boolean;
   under_moq_price_per_kg?: number | string | null;
@@ -40,7 +40,7 @@ export interface UpdateSupplierCommodityDTO {
   lead_time_days?: number;
   image_url?: string | null;
   description?: string | null;
-  estimated_harvest_date?: string | null;
+  production_date?: string | null;
   auto_activate_marketplace?: boolean;
   allows_under_moq?: boolean;
   under_moq_price_per_kg?: number | string | null;

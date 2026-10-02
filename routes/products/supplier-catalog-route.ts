@@ -5,6 +5,7 @@ import {
   list_supplier_commodities,
   update_supplier_commodity,
   delete_supplier_commodity,
+  get_supplier_commodities_by_entity_id,
 } from '../../controllers/products/supplier-catalog-controller';
 import {
   create_supplier_commodity_validation,
@@ -46,6 +47,28 @@ router.use("/batch",commodity_batch )
  *         description: Daftar komoditas katalog berhasil diambil
  */
 router.get('/', list_supplier_commodities);
+
+/**
+ * @swagger
+ * /api/supplier-catalogs/entity-id/{id}:
+ *   get:
+ *     summary: Mendapatkan daftar komoditas katalog berdasarkan entity_id bisnis
+ *     tags: [SupplierCatalogs]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID UUID dari Business Entity
+ *     responses:
+ *       200:
+ *         description: Daftar komoditas entitas bisnis berhasil diambil
+ *       404:
+ *         description: Entitas bisnis tidak ditemukan
+ */
+router.get('/entity-id/:id', get_supplier_commodity_by_id_validation, get_supplier_commodities_by_entity_id);
 
 /**
  * @swagger
@@ -124,7 +147,7 @@ router.get('/:id', get_supplier_commodity_by_id_validation, get_supplier_commodi
  *                 type: string
  *                 nullable: true
  *                 example: "Beras pulen berkualitas super langsung dari petani Klaten."
- *               estimated_harvest_date:
+ *               production_date:
  *                 type: string
  *                 format: date
  *                 nullable: true
@@ -214,7 +237,7 @@ router.post('/', create_supplier_commodity_validation, create_supplier_commodity
  *               description:
  *                 type: string
  *                 nullable: true
- *               estimated_harvest_date:
+ *               production_date:
  *                 type: string
  *                 format: date
  *                 nullable: true

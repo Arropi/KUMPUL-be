@@ -15,8 +15,7 @@ export const create_commodity_batch_tag = async (
   try {
     const formatted_payload = {
       commodity_id: req.body.commodity_id,
-      license_number: req.body.license_number,
-      production_date: req.body.production_date,
+      supporting_file_url: req.body.supporting_file_url ?? req.body.supporting_file,
       storage_temperature_type: req.body.storage_temperature_type,
       is_verified: req.body.is_verified,
     };
@@ -80,8 +79,7 @@ export const update_commodity_batch_tag = async (
     const tag_id = req.params.id as string;
     const formatted_payload = {
       commodity_id: req.body.commodity_id,
-      license_number: req.body.license_number,
-      production_date: req.body.production_date,
+      supporting_file_url: req.body.supporting_file_url ?? req.body.supporting_file,
       storage_temperature_type: req.body.storage_temperature_type,
       is_verified: req.body.is_verified,
     };

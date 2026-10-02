@@ -24,8 +24,7 @@ export const create_commodity_batch_tag_service = async (
 
   const insert_payload: CommodityBatchTagInsertPayload = {
     commodity_id: payload.commodity_id,
-    license_number: payload.license_number ?? null,
-    production_date: payload.production_date,
+    supporting_file_url: payload.supporting_file_url ?? null,
     storage_temperature_type: payload.storage_temperature_type ?? 'AMBIENT',
     is_verified: payload.is_verified ?? false,
   };
@@ -78,11 +77,8 @@ export const update_commodity_batch_tag_service = async (
   if (payload.commodity_id !== undefined) {
     update_payload.commodity_id = payload.commodity_id;
   }
-  if (payload.license_number !== undefined) {
-    update_payload.license_number = payload.license_number;
-  }
-  if (payload.production_date !== undefined) {
-    update_payload.production_date = payload.production_date;
+  if (payload.supporting_file_url !== undefined) {
+    update_payload.supporting_file_url = payload.supporting_file_url;
   }
   if (payload.storage_temperature_type !== undefined) {
     update_payload.storage_temperature_type = payload.storage_temperature_type;

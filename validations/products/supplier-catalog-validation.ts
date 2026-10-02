@@ -79,10 +79,10 @@ const create_commodity_schema = z
       .optional(),
     image_url: z.string().nullable().optional(),
     description: z.string().nullable().optional(),
-    estimated_harvest_date: z
+    production_date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, {
-        message: 'estimated_harvest_date harus berformat YYYY-MM-DD',
+        message: 'production_date harus berformat YYYY-MM-DD',
       })
       .nullable()
       .optional(),
@@ -168,10 +168,10 @@ const update_commodity_schema = z
       .optional(),
     image_url: z.string().nullable().optional(),
     description: z.string().nullable().optional(),
-    estimated_harvest_date: z
+    production_date: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, {
-        message: 'estimated_harvest_date harus berformat YYYY-MM-DD',
+        message: 'production_date harus berformat YYYY-MM-DD',
       })
       .nullable()
       .optional(),
@@ -245,6 +245,9 @@ export const create_supplier_commodity_validation = (
   next: NextFunction
 ): void => {
   try {
+    if (!req.body.production_date && (req.body.estimated_harvest_date || req.body.estimated_harvest_day)) {
+      req.body.production_date = req.body.estimated_harvest_date ?? req.body.estimated_harvest_day;
+    }
     req.body = create_commodity_schema.parse(req.body);
     next();
   } catch (validation_error) {
@@ -259,6 +262,9 @@ export const update_supplier_commodity_validation = (
 ): void => {
   try {
     req.params = commodity_id_param_schema.parse(req.params) as { id: string };
+    if (!req.body.production_date && (req.body.estimated_harvest_date || req.body.estimated_harvest_day)) {
+      req.body.production_date = req.body.estimated_harvest_date ?? req.body.estimated_harvest_day;
+    }
     req.body = update_commodity_schema.parse(req.body);
     next();
   } catch (validation_error) {

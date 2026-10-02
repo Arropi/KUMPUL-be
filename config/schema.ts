@@ -29,12 +29,75 @@ export const sector_type_enum = pgEnum('sector_type_enum', [
   'LOGISTIK',
 ]);
 
+export const unit_enum = pgEnum('unit_enum', [
+  'KG',
+  'GRAM',
+  'MG',
+  'TON',
+  'KUINTAL',
+  'LITER',
+  'ML',
+  'KUBIK',
+  'PCS',
+  'EKOR',
+  'BUTIR',
+  'LEMBAR',
+  'IKAT',
+  'PORSI',
+  'CUP',
+  'BUNGKUS',
+  'PACK',
+  'PAX',
+  'DUS',
+  'BOX',
+  'KARTON',
+  'KARUNG',
+  'SAK',
+  'KRAT',
+  'BAL',
+  'BOTOL',
+  'KALENG',
+  'TRAY',
+  'KERANJANG',
+  'BASKOM',
+  'LUSIN',
+  'PALLET',
+  'KOLI',
+]);
+
 export const wholesale_unit_enum = pgEnum('wholesale_unit_enum', [
   'KARUNG',
   'SAK',
   'KRAT',
   'PAX',
   'BAL',
+  'KG',
+  'GRAM',
+  'TON',
+  'KUINTAL',
+  'LITER',
+  'ML',
+  'KUBIK',
+  'PCS',
+  'PACK',
+  'DUS',
+  'BOX',
+  'KARTON',
+  'BOTOL',
+  'KALENG',
+  'TRAY',
+  'KERANJANG',
+  'BASKOM',
+  'EKOR',
+  'BUTIR',
+  'LEMBAR',
+  'IKAT',
+  'PORSI',
+  'CUP',
+  'BUNGKUS',
+  'LUSIN',
+  'PALLET',
+  'KOLI',
 ]);
 
 export const storage_temp_enum = pgEnum('storage_temp_enum', [
@@ -170,7 +233,7 @@ export const supplier_commodities = pgTable('supplier_commodities', {
   lead_time_days: integer('lead_time_days').default(1).notNull(),
   image_url: text('image_url'),
   description: text('description'),
-  estimated_harvest_date: date('estimated_harvest_date'),
+  production_date: date('production_date'),
   auto_activate_marketplace: boolean('auto_activate_marketplace')
     .default(false)
     .notNull(),
@@ -199,8 +262,7 @@ export const commodity_batch_tags = pgTable('commodity_batch_tags', {
   commodity_id: uuid('commodity_id')
     .references(() => supplier_commodities.id)
     .notNull(),
-  license_number: varchar('license_number'),
-  production_date: date('production_date').notNull(),
+  supporting_file_url: text('supporting_file_url'),
   storage_temperature_type: storage_temp_enum('storage_temperature_type')
     .default('AMBIENT')
     .notNull(),
@@ -271,11 +333,34 @@ export const umkm_procurement_orders = pgTable('umkm_procurement_orders', {
   shipping_fee: numeric('shipping_fee').notNull(),
   grand_total: numeric('grand_total').notNull(),
   payment_status: payment_status_enum('payment_status').default('PENDING').notNull(),
+  snap_token: text('snap_token'),
+  snap_redirect_url: text('snap_redirect_url'),
+  payment_method: varchar('payment_method'),
+  settlement_time: timestamp('settlement_time', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
-// 2.11. Escrow Transactions
+// 2.11. Payment Transactions
+export const payment_transactions = pgTable('payment_transactions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  order_id: uuid('order_id')
+    .references(() => umkm_procurement_orders.id, { onDelete: 'cascade' })
+    .notNull(),
+  midtrans_order_id: varchar('midtrans_order_id', { length: 150 }).notNull().unique(),
+  transaction_id: varchar('transaction_id', { length: 150 }),
+  payment_type: varchar('payment_type', { length: 100 }),
+  gross_amount: numeric('gross_amount').notNull(),
+  transaction_status: varchar('transaction_status', { length: 100 }).notNull(),
+  fraud_status: varchar('fraud_status', { length: 50 }),
+  snap_token: text('snap_token'),
+  snap_redirect_url: text('snap_redirect_url'),
+  raw_response: jsonb('raw_response'),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
+// 2.12. Escrow Transactions
 export const escrow_transactions = pgTable('escrow_transactions', {
   id: uuid('id').defaultRandom().primaryKey(),
   transaction_type: escrow_type_enum('transaction_type').notNull(),
@@ -293,6 +378,7 @@ export const umkm_products = pgTable('umkm_products', {
     .references(() => business_roles.id)
     .notNull(),
   product_name: varchar('product_name').notNull(),
+  unit: unit_enum('unit').default('PCS').notNull(),
   target_selling_price_per_unit: numeric('target_selling_price_per_unit').notNull(),
   expected_batch_units: integer('expected_batch_units').default(1).notNull(),
   calculated_hpp_per_unit: numeric('calculated_hpp_per_unit').default('0.00'),
@@ -309,7 +395,7 @@ export const recipe_details = pgTable('recipe_details', {
     .notNull(),
   ingredient_name: varchar('ingredient_name').notNull(),
   required_qty_per_unit: numeric('required_qty_per_unit').notNull(),
-  unit: varchar('unit').notNull(),
+  unit: unit_enum('unit').notNull(),
   total_batch_required_qty: numeric('total_batch_required_qty').notNull(),
   estimated_cost_per_unit: numeric('estimated_cost_per_unit').default('0.00').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -462,10 +548,18 @@ export const consolidated_pos_relations = relations(consolidated_pos, ({ one }) 
   }),
 }));
 
-export const umkm_procurement_orders_relations = relations(umkm_procurement_orders, ({ one }) => ({
+export const umkm_procurement_orders_relations = relations(umkm_procurement_orders, ({ one, many }) => ({
   participant: one(pool_participants, {
     fields: [umkm_procurement_orders.participant_id],
     references: [pool_participants.id],
+  }),
+  payments: many(payment_transactions),
+}));
+
+export const payment_transactions_relations = relations(payment_transactions, ({ one }) => ({
+  order: one(umkm_procurement_orders, {
+    fields: [payment_transactions.order_id],
+    references: [umkm_procurement_orders.id],
   }),
 }));
 
@@ -561,6 +655,9 @@ export type NewConsolidatedPO = InferInsertModel<typeof consolidated_pos>;
 
 export type UmkmProcurementOrder = InferSelectModel<typeof umkm_procurement_orders>;
 export type NewUmkmProcurementOrder = InferInsertModel<typeof umkm_procurement_orders>;
+
+export type PaymentTransaction = InferSelectModel<typeof payment_transactions>;
+export type NewPaymentTransaction = InferInsertModel<typeof payment_transactions>;
 
 export type EscrowTransaction = InferSelectModel<typeof escrow_transactions>;
 export type NewEscrowTransaction = InferInsertModel<typeof escrow_transactions>;

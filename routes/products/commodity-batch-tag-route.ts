@@ -77,22 +77,16 @@ router.get('/:id', batch_tag_id_param_validation, get_commodity_batch_tag_by_id)
  *             type: object
  *             required:
  *               - commodity_id
- *               - production_date
  *             properties:
  *               commodity_id:
  *                 type: string
  *                 format: uuid
  *                 example: "11111111-2222-3333-4444-555555555555"
- *               license_number:
+ *               supporting_file_url:
  *                 type: string
  *                 nullable: true
- *                 example: "BPOM-RI-MD-12345678"
- *                 description: Nomor izin edar / lisensi batch
- *               production_date:
- *                 type: string
- *                 format: date
- *                 example: "2026-10-01"
- *                 description: Tanggal produksi (YYYY-MM-DD)
+ *                 example: "https://storage.supabase.co/kumpul-files/docs/cert-batch-001.pdf"
+ *                 description: URL berkas/file pendukung (dokumen mutu/izin/sertifikasi) untuk verifikasi AI
  *               storage_temperature_type:
  *                 type: string
  *                 enum: [AMBIENT, CHILLED, FROZEN]
@@ -137,14 +131,11 @@ router.post('/', create_commodity_batch_tag_validation, create_commodity_batch_t
  *               commodity_id:
  *                 type: string
  *                 format: uuid
- *               license_number:
+ *               supporting_file_url:
  *                 type: string
  *                 nullable: true
- *                 example: "BPOM-RI-MD-12345678"
- *               production_date:
- *                 type: string
- *                 format: date
- *                 example: "2026-10-01"
+ *                 example: "https://storage.supabase.co/kumpul-files/docs/cert-batch-001.pdf"
+ *                 description: URL berkas/file pendukung (dokumen mutu/izin/sertifikasi) untuk verifikasi AI
  *               storage_temperature_type:
  *                 type: string
  *                 enum: [AMBIENT, CHILLED, FROZEN]
