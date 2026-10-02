@@ -19,6 +19,8 @@ export type {
   NewConsolidatedPO,
   UmkmProcurementOrder,
   NewUmkmProcurementOrder,
+  PaymentTransaction,
+  NewPaymentTransaction,
   EscrowTransaction,
   NewEscrowTransaction,
   UmkmProduct,

@@ -14,13 +14,13 @@ export type SectorType =
 export interface CreateBusinessRoleDTO {
   entity_id: string;
   role_type: RoleType;
-  sector_type: SectorType;
+  sector_type?: SectorType | null;
   storage_capacity?: number;
   is_active?: boolean;
 }
 
 export interface UpdateBusinessRoleDTO {
-  sector_type?: SectorType;
+  sector_type?: SectorType | null;
   storage_capacity?: number;
   is_active?: boolean;
 }
@@ -28,7 +28,7 @@ export interface UpdateBusinessRoleDTO {
 export interface BusinessRoleFilterDTO {
   entity_id?: string;
   role_type?: RoleType;
-  sector_type?: SectorType;
+  sector_type?: SectorType | null;
   is_active?: boolean;
   limit?: number;
   offset?: number;

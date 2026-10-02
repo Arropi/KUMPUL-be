@@ -6,6 +6,7 @@ import {
   list_all_catalog_commodities_service,
   update_supplier_commodity_service,
   delete_supplier_commodity_service,
+  get_commodities_by_entity_id_service,
 } from '../../services/products/supplier-catalog-service';
 
 export const create_supplier_commodity = async (
@@ -18,9 +19,18 @@ export const create_supplier_commodity = async (
       supplier_role_id: req.body.supplier_role_id,
       name: req.body.name,
       wholesale_unit: req.body.wholesale_unit,
+      base_price: req.body.base_price,
+      stock: req.body.stock,
       base_moq: req.body.base_moq,
       lead_time_days: req.body.lead_time_days,
+      image_url: req.body.image_url,
+      description: req.body.description,
+      production_date: req.body.production_date ?? req.body.estimated_harvest_date ?? req.body.estimated_harvest_day,
+      auto_activate_marketplace: req.body.auto_activate_marketplace,
+      allows_under_moq: req.body.allows_under_moq,
+      under_moq_price_per_kg: req.body.under_moq_price_per_kg,
       is_marketplace_active: req.body.is_marketplace_active,
+      price_tiers: req.body.price_tiers,
     };
 
     const created_item = await create_supplier_commodity_service(formatted_payload);
@@ -98,9 +108,18 @@ export const update_supplier_commodity = async (
     const formatted_update_payload = {
       name: req.body.name,
       wholesale_unit: req.body.wholesale_unit,
+      base_price: req.body.base_price,
+      stock: req.body.stock,
       base_moq: req.body.base_moq,
       lead_time_days: req.body.lead_time_days,
+      image_url: req.body.image_url,
+      description: req.body.description,
+      production_date: req.body.production_date ?? req.body.estimated_harvest_date ?? req.body.estimated_harvest_day,
+      auto_activate_marketplace: req.body.auto_activate_marketplace,
+      allows_under_moq: req.body.allows_under_moq,
+      under_moq_price_per_kg: req.body.under_moq_price_per_kg,
       is_marketplace_active: req.body.is_marketplace_active,
+      price_tiers: req.body.price_tiers,
     };
 
     const updated_item = await update_supplier_commodity_service(
@@ -130,6 +149,25 @@ export const delete_supplier_commodity = async (
     res.status(200).json({
       status: 'success',
       message: 'Komoditas katalog supplier berhasil dihapus',
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const get_supplier_commodities_by_entity_id = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const entity_id = req.params.id as string;
+    const commodities_data = await get_commodities_by_entity_id_service(entity_id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Daftar komoditas entitas bisnis berhasil diambil',
+      data: commodities_data,
     });
   } catch (controller_error) {
     next(controller_error);

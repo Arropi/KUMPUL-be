@@ -14,10 +14,11 @@ export const create_business_role = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const raw_sector = req.body.sector_type ?? req.body.sector;
     const formatted_payload = {
       entity_id: req.body.entity_id,
       role_type: req.body.role_type as RoleType,
-      sector_type: req.body.sector_type as SectorType,
+      sector_type: raw_sector ? (raw_sector as SectorType) : undefined,
       storage_capacity: req.body.storage_capacity,
       is_active: req.body.is_active,
     };
@@ -59,10 +60,11 @@ export const list_business_roles = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const raw_query_sector = req.query.sector_type ?? req.query.sector;
     const filter_params = {
       entity_id: req.query.entity_id as string | undefined,
       role_type: req.query.role_type as RoleType | undefined,
-      sector_type: req.query.sector_type as SectorType | undefined,
+      sector_type: raw_query_sector ? (raw_query_sector as SectorType) : undefined,
       is_active:
         req.query.is_active !== undefined
           ? req.query.is_active === 'true'
@@ -90,8 +92,14 @@ export const update_business_role = async (
 ): Promise<void> => {
   try {
     const role_id = req.params.id as string;
+    const raw_update_sector = req.body.sector_type ?? req.body.sector;
     const formatted_update_payload = {
-      sector_type: req.body.sector_type as SectorType | undefined,
+      sector_type:
+        raw_update_sector !== undefined
+          ? raw_update_sector
+            ? (raw_update_sector as SectorType)
+            : null
+          : undefined,
       storage_capacity: req.body.storage_capacity,
       is_active: req.body.is_active,
     };

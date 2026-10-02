@@ -37,7 +37,9 @@ export const create_business_role_service = async (
   );
   if (existing_duplicate) {
     throw new AppError(
-      'Business entity sudah memiliki role dengan jenis dan sektor ini',
+      payload.sector_type
+        ? 'Business entity sudah memiliki role dengan jenis dan sektor ini'
+        : 'Business entity sudah memiliki role dengan jenis ini tanpa sektor',
       400,
       'ROLE_ALREADY_EXISTS'
     );
@@ -46,7 +48,7 @@ export const create_business_role_service = async (
   const insert_payload = {
     entity_id: payload.entity_id,
     role_type: payload.role_type,
-    sector_type: payload.sector_type,
+    sector_type: payload.sector_type ?? null,
     storage_capacity: payload.storage_capacity ?? 0,
     is_active: payload.is_active ?? true,
   };
@@ -89,7 +91,7 @@ export const update_business_role_service = async (
   }
 
   // Jika sektor diperbarui, pastikan tidak terjadi duplikasi dengan role_type yang sama
-  if (payload.sector_type && payload.sector_type !== existing_role.sector_type) {
+  if (payload.sector_type !== undefined && payload.sector_type !== existing_role.sector_type) {
     const duplicate_check = await find_duplicate_role(
       existing_role.entity_id,
       existing_role.role_type,
@@ -97,7 +99,9 @@ export const update_business_role_service = async (
     );
     if (duplicate_check && duplicate_check.id !== role_id) {
       throw new AppError(
-        'Business entity sudah memiliki role dengan jenis dan sektor tersebut',
+        payload.sector_type
+          ? 'Business entity sudah memiliki role dengan jenis dan sektor tersebut'
+          : 'Business entity sudah memiliki role dengan jenis ini tanpa sektor',
         400,
         'ROLE_ALREADY_EXISTS'
       );
@@ -105,7 +109,7 @@ export const update_business_role_service = async (
   }
 
   const update_payload = {
-    ...(payload.sector_type ? { sector_type: payload.sector_type } : {}),
+    ...(payload.sector_type !== undefined ? { sector_type: payload.sector_type } : {}),
     ...(payload.storage_capacity !== undefined
       ? { storage_capacity: payload.storage_capacity }
       : {}),
