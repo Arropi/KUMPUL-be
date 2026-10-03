@@ -4,6 +4,7 @@ import {
   get_commodity_batch_tag_by_id,
   list_batch_tags_by_commodity_id,
   update_commodity_batch_tag,
+  verify_commodity_batch_tag_with_ai,
   delete_commodity_batch_tag,
 } from '../../controllers/products/commodity-batch-tag-controller';
 import {
@@ -153,6 +154,30 @@ router.post('/', create_commodity_batch_tag_validation, create_commodity_batch_t
  *         description: Batch tag atau komoditas tidak ditemukan
  */
 router.put('/:id', update_commodity_batch_tag_validation, update_commodity_batch_tag);
+
+/**
+ * @swagger
+ * /api/commodity-batch-tags/{id}/verify:
+ *   post:
+ *     summary: Memvalidasi berkas pendukung batch tag menggunakan AI Gemini (kebersihan, legalitas & masa berlaku)
+ *     tags: [CommodityBatchTags]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID UUID dari batch tag yang akan diverifikasi
+ *     responses:
+ *       200:
+ *         description: Verifikasi AI berhasil dijalankan dan status is_verified diperbarui
+ *       400:
+ *         description: Dokumen pendukung tidak ditemukan pada batch tag
+ *       404:
+ *         description: Batch tag tidak ditemukan
+ */
+router.post('/:id/verify', batch_tag_id_param_validation, verify_commodity_batch_tag_with_ai);
 
 /**
  * @swagger

@@ -4,6 +4,7 @@ import {
   get_commodity_batch_tag_by_id_service,
   list_batch_tags_by_commodity_id_service,
   update_commodity_batch_tag_service,
+  verify_batch_tag_with_ai_service,
   delete_commodity_batch_tag_service,
 } from '../../services/products/commodity-batch-tag-service';
 
@@ -90,6 +91,28 @@ export const update_commodity_batch_tag = async (
       status: 'success',
       message: 'Commodity batch tag berhasil diperbarui',
       data: updated_item,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const verify_commodity_batch_tag_with_ai = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const tag_id = req.params.id as string;
+    const result = await verify_batch_tag_with_ai_service(tag_id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Verifikasi AI dokumen batch tag berhasil diselesaikan',
+      data: {
+        batch_tag: result.tag,
+        verification: result.verification,
+      },
     });
   } catch (controller_error) {
     next(controller_error);
