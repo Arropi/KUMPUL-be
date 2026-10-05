@@ -24,6 +24,8 @@ export interface CreateSupplierCommodityDTO {
   image_url?: string | null;
   description?: string | null;
   production_date?: string | null;
+  closed_date?: string | null;
+  reserved_stock?: number | string;
   auto_activate_marketplace?: boolean;
   allows_under_moq?: boolean;
   under_moq_price_per_kg?: number | string | null;
@@ -41,6 +43,8 @@ export interface UpdateSupplierCommodityDTO {
   image_url?: string | null;
   description?: string | null;
   production_date?: string | null;
+  closed_date?: string | null;
+  reserved_stock?: number | string;
   auto_activate_marketplace?: boolean;
   allows_under_moq?: boolean;
   under_moq_price_per_kg?: number | string | null;

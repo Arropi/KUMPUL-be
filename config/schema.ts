@@ -213,6 +213,9 @@ export const offtaker_directories = pgTable('offtaker_directories', {
   org_name: varchar('org_name').notNull(),
   contact_person: varchar('contact_person'),
   phone: varchar('phone'),
+  address: text('address'),
+  latitude: numeric('latitude'),
+  longitude: numeric('longitude'),
   accepted_waste_types: jsonb('accepted_waste_types').default([]).notNull(),
   service_area_city: varchar('service_area_city').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
@@ -234,6 +237,8 @@ export const supplier_commodities = pgTable('supplier_commodities', {
   image_url: text('image_url'),
   description: text('description'),
   production_date: date('production_date'),
+  closed_date: date('closed_date'),
+  reserved_stock: numeric('reserved_stock').default('0.00').notNull(),
   auto_activate_marketplace: boolean('auto_activate_marketplace')
     .default(false)
     .notNull(),
@@ -267,6 +272,8 @@ export const commodity_batch_tags = pgTable('commodity_batch_tags', {
     .default('AMBIENT')
     .notNull(),
   is_verified: boolean('is_verified').default(false).notNull(),
+  verification_notes: text('verification_notes'),
+  verified_at: timestamp('verified_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -276,10 +283,16 @@ export const procurement_pools = pgTable('procurement_pools', {
   commodity_id: uuid('commodity_id')
     .references(() => supplier_commodities.id)
     .notNull(),
+  host_umkm_role_id: uuid('host_umkm_role_id').references(() => business_roles.id),
   target_moq: numeric('target_moq').notNull(),
   accumulated_qty: numeric('accumulated_qty').default('0.00').notNull(),
   pool_status: pool_status_enum('pool_status').default('OPEN').notNull(),
   locked_tier_price: numeric('locked_tier_price'),
+  target_delivery_date: date('target_delivery_date'),
+  cutoff_date: date('cutoff_date'),
+  is_asap_allowed: boolean('is_asap_allowed').default(true),
+  is_direct_order: boolean('is_direct_order').default(false).notNull(),
+  estimated_delivery_date: date('estimated_delivery_date'),
   expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),
   default_hub_address: text('default_hub_address'),
   hub_latitude: numeric('hub_latitude'),
@@ -298,11 +311,16 @@ export const pool_participants = pgTable('pool_participants', {
     .references(() => business_roles.id)
     .notNull(),
   order_qty: numeric('order_qty').notNull(),
-  delivery_method: delivery_method_enum('delivery_method').notNull(),
+  delivery_method: delivery_method_enum('delivery_method'),
+  required_delivery_date: date('required_delivery_date'),
+  is_urgent_asap: boolean('is_urgent_asap').default(false).notNull(),
   final_delivery_address: text('final_delivery_address').notNull(),
   final_delivery_lat: numeric('final_delivery_lat').notNull(),
   final_delivery_lng: numeric('final_delivery_lng').notNull(),
   allocated_shipping_fee: numeric('allocated_shipping_fee').default('0.00').notNull(),
+  pickup_code: varchar('pickup_code', { length: 10 }),
+  is_picked_up: boolean('is_picked_up').default(false).notNull(),
+  picked_up_at: timestamp('picked_up_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
 
@@ -318,6 +336,7 @@ export const consolidated_pos = pgTable('consolidated_pos', {
     .notNull(),
   total_amount: numeric('total_amount').notNull(),
   po_status: po_status_enum('po_status').default('ISSUED').notNull(),
+  delivery_date: date('delivery_date'),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
@@ -333,6 +352,7 @@ export const umkm_procurement_orders = pgTable('umkm_procurement_orders', {
   shipping_fee: numeric('shipping_fee').notNull(),
   grand_total: numeric('grand_total').notNull(),
   payment_status: payment_status_enum('payment_status').default('PENDING').notNull(),
+  payment_deadline: timestamp('payment_deadline', { withTimezone: true }),
   snap_token: text('snap_token'),
   snap_redirect_url: text('snap_redirect_url'),
   payment_method: varchar('payment_method'),
@@ -428,6 +448,7 @@ export const waste_listings = pgTable('waste_listings', {
   listing_status: waste_listing_status_enum('listing_status')
     .default('AVAILABLE')
     .notNull(),
+  notes: text('notes'),
   expired_at: timestamp('expired_at', { withTimezone: true }).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
@@ -447,6 +468,13 @@ export const waste_transactions = pgTable('waste_transactions', {
   fulfillment_status: waste_fulfillment_enum('fulfillment_status')
     .default('PAID_HELD_IN_ESCROW')
     .notNull(),
+  pickup_date: date('pickup_date'),
+  pickup_code: varchar('pickup_code', { length: 10 }),
+  picked_up_at: timestamp('picked_up_at', { withTimezone: true }),
+  snap_token: text('snap_token'),
+  snap_redirect_url: text('snap_redirect_url'),
+  midtrans_order_id: varchar('midtrans_order_id', { length: 150 }),
+  payment_status: payment_status_enum('payment_status').default('PENDING').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
@@ -465,6 +493,20 @@ export const offtaker_referral_logs = pgTable('offtaker_referral_logs', {
     .default('REQUESTED')
     .notNull(),
   dispatched_at: timestamp('dispatched_at', { withTimezone: true }).defaultNow(),
+});
+
+// 2.18. UMKM Inventory Stocks
+export const umkm_inventory_stocks = pgTable('umkm_inventory_stocks', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  umkm_role_id: uuid('umkm_role_id')
+    .references(() => business_roles.id, { onDelete: 'cascade' })
+    .notNull(),
+  ingredient_name: varchar('ingredient_name', { length: 255 }).notNull(),
+  current_stock: numeric('current_stock').default('0.00').notNull(),
+  unit: unit_enum('unit').default('KG').notNull(),
+  last_restocked_at: timestamp('last_restocked_at', { withTimezone: true }),
+  created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
 // ==========================================
@@ -486,6 +528,7 @@ export const business_roles_relations = relations(business_roles, ({ one, many }
   umkm_products: many(umkm_products),
   waste_listings: many(waste_listings),
   waste_transactions: many(waste_transactions),
+  inventory_stocks: many(umkm_inventory_stocks),
 }));
 
 export const offtaker_directories_relations = relations(offtaker_directories, ({ many }) => ({
@@ -622,6 +665,13 @@ export const offtaker_referral_logs_relations = relations(offtaker_referral_logs
   }),
 }));
 
+export const umkm_inventory_stocks_relations = relations(umkm_inventory_stocks, ({ one }) => ({
+  umkm_role: one(business_roles, {
+    fields: [umkm_inventory_stocks.umkm_role_id],
+    references: [business_roles.id],
+  }),
+}));
+
 // ==========================================
 // 4. INFERRED TYPES
 // ==========================================
@@ -679,3 +729,6 @@ export type NewWasteTransaction = InferInsertModel<typeof waste_transactions>;
 
 export type OfftakerReferralLog = InferSelectModel<typeof offtaker_referral_logs>;
 export type NewOfftakerReferralLog = InferInsertModel<typeof offtaker_referral_logs>;
+
+export type UmkmInventoryStock = InferSelectModel<typeof umkm_inventory_stocks>;
+export type NewUmkmInventoryStock = InferInsertModel<typeof umkm_inventory_stocks>;

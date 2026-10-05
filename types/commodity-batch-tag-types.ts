@@ -7,6 +7,8 @@ export interface CreateCommodityBatchTagDTO {
   supporting_file_url?: string | null;
   storage_temperature_type?: StorageTemperatureType;
   is_verified?: boolean;
+  verification_notes?: string | null;
+  verified_at?: Date | null;
 }
 
 export interface UpdateCommodityBatchTagDTO {
@@ -14,6 +16,16 @@ export interface UpdateCommodityBatchTagDTO {
   supporting_file_url?: string | null;
   storage_temperature_type?: StorageTemperatureType;
   is_verified?: boolean;
+  verification_notes?: string | null;
+  verified_at?: Date | null;
+}
+
+export interface QualityVerificationResultDTO {
+  is_verified: boolean;
+  hygiene_assessment: string;
+  legality_assessment: string;
+  expiration_valid: boolean;
+  verification_notes: string;
 }
 
 export type CommodityBatchTagRecord = CommodityBatchTag;

@@ -3,7 +3,7 @@ import {
   register_user_role_service,
   login_user_service,
 } from '../../services/auth/auth-service';
-import type { RoleType, SectorType } from '../../types/business-role-types';
+import type { RoleType, SectorType } from '../../types/profile-types';
 
 export const register_user_role = async (
   req: Request,

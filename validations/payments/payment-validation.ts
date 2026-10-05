@@ -5,6 +5,7 @@ const initiate_payment_schema = z.object({
   order_id: z.string().uuid({
     message: 'order_id harus berformat UUID valid',
   }),
+  delivery_method: z.enum(['HEMAT_HUB', 'DIRECT_DOOR_TO_DOOR']).optional(),
 });
 
 const release_escrow_schema = z.object({

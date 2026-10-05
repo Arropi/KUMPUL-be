@@ -4,13 +4,11 @@ import { business_entities, business_roles } from '../../config/schema';
 import type {
   BusinessEntityRecord,
   BusinessEntityInsertPayload,
-} from '../../types/business-entity-types';
-import type {
   BusinessRoleRecord,
   BusinessRoleInsertPayload,
   RoleType,
   SectorType,
-} from '../../types/business-role-types';
+} from '../../types/profile-types';
 
 export const find_entity_by_user_id = async (
   user_id: string

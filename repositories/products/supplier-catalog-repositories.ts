@@ -91,6 +91,21 @@ export const find_all_commodities = async (
   return records;
 };
 
+export const find_active_marketplace_commodities = async (
+  limit_count = 20,
+  offset_count = 0
+): Promise<SupplierCommodityRecord[]> => {
+  const records = await db
+    .select()
+    .from(supplier_commodities)
+    .where(eq(supplier_commodities.is_marketplace_active, true))
+    .orderBy(desc(supplier_commodities.created_at))
+    .limit(limit_count)
+    .offset(offset_count);
+
+  return records;
+};
+
 export const insert_supplier_commodity = async (
   insert_payload: SupplierCommodityInsertPayload
 ): Promise<SupplierCommodityRecord> => {
@@ -225,6 +240,31 @@ export const find_entity_by_id = async (
   return records[0] ?? null;
 };
 
+export const find_business_roles_with_entities_by_role_ids = async (
+  role_ids: string[]
+): Promise<Record<string, { role_id: string; entity_id: string; business_name: string; city: string | null }>> => {
+  if (role_ids.length === 0) {
+    return {};
+  }
+  const records = await db
+    .select({
+      role_id: business_roles.id,
+      entity_id: business_entities.id,
+      business_name: business_entities.legal_name,
+      city: business_entities.default_address,
+    })
+    .from(business_roles)
+    .innerJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
+    .where(inArray(business_roles.id, role_ids));
+
+  const role_map: Record<string, { role_id: string; entity_id: string; business_name: string; city: string | null }> = {};
+  for (const record_item of records) {
+    role_map[record_item.role_id] = record_item;
+  }
+
+  return role_map;
+};
+
 export const find_commodities_by_entity_id = async (
   entity_id: string
 ): Promise<SupplierCommodityRecord[]> => {
@@ -242,6 +282,8 @@ export const find_commodities_by_entity_id = async (
       image_url: supplier_commodities.image_url,
       description: supplier_commodities.description,
       production_date: supplier_commodities.production_date,
+      closed_date: supplier_commodities.closed_date,
+      reserved_stock: supplier_commodities.reserved_stock,
       auto_activate_marketplace: supplier_commodities.auto_activate_marketplace,
       allows_under_moq: supplier_commodities.allows_under_moq,
       under_moq_price_per_kg: supplier_commodities.under_moq_price_per_kg,

@@ -5,6 +5,7 @@ import {
   list_batch_tags_by_commodity_id_service,
   update_commodity_batch_tag_service,
   delete_commodity_batch_tag_service,
+  verify_commodity_batch_tag_ai_service,
 } from '../../services/products/commodity-batch-tag-service';
 
 export const create_commodity_batch_tag = async (
@@ -109,6 +110,27 @@ export const delete_commodity_batch_tag = async (
       status: 'success',
       message: 'Commodity batch tag berhasil dihapus',
       data: deleted_item,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const verify_commodity_batch_tag_ai = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const tag_id = req.params.id as string;
+    const result = await verify_commodity_batch_tag_ai_service(tag_id);
+
+    res.status(200).json({
+      status: 'success',
+      message: result.ai_result.is_verified
+        ? 'Verifikasi mutu dokumen berhasil divalidasi oleh AI'
+        : 'Verifikasi mutu dokumen ditolak oleh AI (tidak memenuhi kriteria standar)',
+      data: result,
     });
   } catch (controller_error) {
     next(controller_error);

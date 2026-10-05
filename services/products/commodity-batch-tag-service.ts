@@ -6,12 +6,14 @@ import {
   update_commodity_batch_tag_by_id,
   delete_commodity_batch_tag_by_id,
 } from '../../repositories/products/commodity-batch-tag-repositories';
+import { verify_commodity_quality_with_ai } from './commodity-ai-service';
 import { AppError } from '../../middleware/error-middleware';
 import type {
   CreateCommodityBatchTagDTO,
   UpdateCommodityBatchTagDTO,
   CommodityBatchTagRecord,
   CommodityBatchTagInsertPayload,
+  QualityVerificationResultDTO,
 } from '../../types/commodity-batch-tag-types';
 
 export const create_commodity_batch_tag_service = async (
@@ -22,11 +24,29 @@ export const create_commodity_batch_tag_service = async (
     throw new AppError('Komoditas tidak ditemukan', 404, 'COMMODITY_NOT_FOUND');
   }
 
+  // Jalankan audit AI secara otomatis jika berkas pendukung dilampirkan
+  let ai_verified = payload.is_verified ?? false;
+  let ai_notes = payload.verification_notes ?? null;
+  let verified_date = ai_verified ? new Date() : null;
+
+  if (payload.supporting_file_url && payload.is_verified === undefined) {
+    const ai_result = await verify_commodity_quality_with_ai(
+      existing_commodity.name,
+      payload.supporting_file_url,
+      payload.storage_temperature_type
+    );
+    ai_verified = ai_result.is_verified;
+    ai_notes = ai_result.verification_notes;
+    verified_date = ai_result.is_verified ? new Date() : null;
+  }
+
   const insert_payload: CommodityBatchTagInsertPayload = {
     commodity_id: payload.commodity_id,
     supporting_file_url: payload.supporting_file_url ?? null,
     storage_temperature_type: payload.storage_temperature_type ?? 'AMBIENT',
-    is_verified: payload.is_verified ?? false,
+    is_verified: ai_verified,
+    verification_notes: ai_notes,
+    verified_at: verified_date,
   };
 
   const created_record = await insert_commodity_batch_tag(insert_payload);
@@ -85,6 +105,10 @@ export const update_commodity_batch_tag_service = async (
   }
   if (payload.is_verified !== undefined) {
     update_payload.is_verified = payload.is_verified;
+    update_payload.verified_at = payload.is_verified ? new Date() : null;
+  }
+  if (payload.verification_notes !== undefined) {
+    update_payload.verification_notes = payload.verification_notes;
   }
 
   if (Object.keys(update_payload).length === 0) {
@@ -97,6 +121,37 @@ export const update_commodity_batch_tag_service = async (
   }
 
   return updated_record;
+};
+
+export const verify_commodity_batch_tag_ai_service = async (
+  tag_id: string
+): Promise<{ tag: CommodityBatchTagRecord; ai_result: QualityVerificationResultDTO }> => {
+  const existing_tag = await find_commodity_batch_tag_by_id(tag_id);
+  if (!existing_tag) {
+    throw new AppError('Commodity batch tag tidak ditemukan', 404, 'BATCH_TAG_NOT_FOUND');
+  }
+
+  const commodity = await find_commodity_by_id(existing_tag.commodity_id);
+  if (!commodity) {
+    throw new AppError('Komoditas batch tag tidak ditemukan', 404, 'COMMODITY_NOT_FOUND');
+  }
+
+  const ai_result = await verify_commodity_quality_with_ai(
+    commodity.name,
+    existing_tag.supporting_file_url,
+    existing_tag.storage_temperature_type
+  );
+
+  const updated_tag = await update_commodity_batch_tag_by_id(tag_id, {
+    is_verified: ai_result.is_verified,
+    verification_notes: ai_result.verification_notes,
+    verified_at: ai_result.is_verified ? new Date() : null,
+  });
+
+  return {
+    tag: updated_tag || existing_tag,
+    ai_result,
+  };
 };
 
 export const delete_commodity_batch_tag_service = async (

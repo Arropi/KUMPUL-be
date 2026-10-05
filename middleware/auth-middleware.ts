@@ -2,9 +2,11 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './error-middleware';
 import type { AuthUserPayload } from '../types/auth-types';
-import type { RoleType } from '../types/business-role-types';
-import { find_active_role_by_entity_and_type } from '../repositories/accounts/business-role-repositories';
-import { find_entity_by_auth_user_id } from '../repositories/accounts/business-entity-repositories';
+import type { RoleType } from '../types/profile-types';
+import {
+  find_active_role_by_entity_and_type,
+  find_entity_by_auth_user_id,
+} from '../repositories/profile/profile-repositories';
 
 const JWT_SECRET = process.env.JWT_SECRET as string
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

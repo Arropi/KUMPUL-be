@@ -18,18 +18,25 @@ export type PaymentStatus = 'PENDING' | 'SETTLED' | 'REFUNDED';
 export interface CreateProcurementPoolDTO {
   commodity_id: string;
   target_moq: number | string;
+  target_delivery_date?: string | null;
+  cutoff_date?: string | null;
+  is_asap_allowed?: boolean;
   expires_at: string;
   default_hub_address?: string | null;
   hub_latitude?: number | string | null;
   hub_longitude?: number | string | null;
 }
 
-// DTO untuk bergabung ke dalam pool (Pre-Order)
+// DTO untuk bergabung ke dalam pool atau membuat pool kamar baru (Pre-Order)
 export interface JoinProcurementPoolDTO {
-  pool_id: string;
+  pool_id?: string;
+  commodity_id?: string;
+  create_new_pool?: boolean;
   umkm_role_id: string;
   order_qty: number | string;
-  delivery_method: DeliveryMethod;
+  delivery_method?: DeliveryMethod;
+  required_delivery_date: string;
+  is_urgent_asap?: boolean;
   final_delivery_address: string;
   final_delivery_lat: number | string;
   final_delivery_lng: number | string;

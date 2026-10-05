@@ -1,0 +1,7 @@
+.git
+.github
+tests/
+*.test.ts
+.env
+.env.local
+.gemini/

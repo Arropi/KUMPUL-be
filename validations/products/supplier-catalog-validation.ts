@@ -86,6 +86,13 @@ const create_commodity_schema = z
       })
       .nullable()
       .optional(),
+    closed_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, {
+        message: 'closed_date harus berformat YYYY-MM-DD',
+      })
+      .nullable()
+      .optional(),
     auto_activate_marketplace: z.boolean().optional(),
     allows_under_moq: z.boolean().optional(),
     under_moq_price_per_kg: z.union([z.number(), z.string()]).nullable().optional(),
@@ -172,6 +179,13 @@ const update_commodity_schema = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, {
         message: 'production_date harus berformat YYYY-MM-DD',
+      })
+      .nullable()
+      .optional(),
+    closed_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, {
+        message: 'closed_date harus berformat YYYY-MM-DD',
       })
       .nullable()
       .optional(),
