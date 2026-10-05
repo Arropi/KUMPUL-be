@@ -6,19 +6,22 @@ import {
   update_commodity_batch_tag_by_id,
   delete_commodity_batch_tag_by_id,
 } from '../../repositories/products/commodity-batch-tag-repositories';
+import { verify_supplier_document_service } from '../ai/gemini-document-service';
 import { verify_commodity_quality_with_ai } from './commodity-ai-service';
 import { AppError } from '../../middleware/error-middleware';
 import type {
   CreateCommodityBatchTagDTO,
   UpdateCommodityBatchTagDTO,
   CommodityBatchTagRecord,
+  CommodityBatchTagWithVerification,
   CommodityBatchTagInsertPayload,
   QualityVerificationResultDTO,
 } from '../../types/commodity-batch-tag-types';
+import type { DocumentVerificationResult } from '../../types/ai-verification-types';
 
 export const create_commodity_batch_tag_service = async (
   payload: CreateCommodityBatchTagDTO
-): Promise<CommodityBatchTagRecord> => {
+): Promise<CommodityBatchTagWithVerification> => {
   const existing_commodity = await find_commodity_by_id(payload.commodity_id);
   if (!existing_commodity) {
     throw new AppError('Komoditas tidak ditemukan', 404, 'COMMODITY_NOT_FOUND');
@@ -28,16 +31,16 @@ export const create_commodity_batch_tag_service = async (
   let ai_verified = payload.is_verified ?? false;
   let ai_notes = payload.verification_notes ?? null;
   let verified_date = ai_verified ? new Date() : null;
+  let verification_result: DocumentVerificationResult | null = null;
 
   if (payload.supporting_file_url && payload.is_verified === undefined) {
-    const ai_result = await verify_commodity_quality_with_ai(
-      existing_commodity.name,
-      payload.supporting_file_url,
-      payload.storage_temperature_type
-    );
-    ai_verified = ai_result.is_verified;
-    ai_notes = ai_result.verification_notes;
-    verified_date = ai_result.is_verified ? new Date() : null;
+    verification_result = await verify_supplier_document_service({
+      file_url: payload.supporting_file_url,
+      commodity_name: existing_commodity.name,
+    });
+    ai_verified = verification_result.is_verified;
+    ai_notes = verification_result.analysis_summary;
+    verified_date = verification_result.is_verified ? new Date() : null;
   }
 
   const insert_payload: CommodityBatchTagInsertPayload = {
@@ -50,7 +53,11 @@ export const create_commodity_batch_tag_service = async (
   };
 
   const created_record = await insert_commodity_batch_tag(insert_payload);
-  return created_record;
+
+  return {
+    ...created_record,
+    ai_verification: verification_result,
+  };
 };
 
 export const get_commodity_batch_tag_by_id_service = async (
@@ -121,6 +128,44 @@ export const update_commodity_batch_tag_service = async (
   }
 
   return updated_record;
+};
+
+export const verify_batch_tag_with_ai_service = async (
+  tag_id: string
+): Promise<{ tag: CommodityBatchTagRecord; verification: DocumentVerificationResult }> => {
+  const existing_tag = await find_commodity_batch_tag_by_id(tag_id);
+  if (!existing_tag) {
+    throw new AppError('Commodity batch tag tidak ditemukan', 404, 'BATCH_TAG_NOT_FOUND');
+  }
+
+  if (!existing_tag.supporting_file_url || existing_tag.supporting_file_url.trim() === '') {
+    throw new AppError(
+      'Batch tag tidak memiliki dokumen pendukung (supporting_file_url) untuk diverifikasi',
+      400,
+      'NO_SUPPORTING_DOCUMENT'
+    );
+  }
+
+  const commodity = await find_commodity_by_id(existing_tag.commodity_id);
+  if (!commodity) {
+    throw new AppError('Komoditas batch tag tidak ditemukan', 404, 'COMMODITY_NOT_FOUND');
+  }
+
+  const verification = await verify_supplier_document_service({
+    file_url: existing_tag.supporting_file_url,
+    commodity_name: commodity.name,
+  });
+
+  const updated_tag = await update_commodity_batch_tag_by_id(tag_id, {
+    is_verified: verification.is_verified,
+    verification_notes: verification.analysis_summary,
+    verified_at: verification.is_verified ? new Date() : null,
+  });
+
+  return {
+    tag: updated_tag || existing_tag,
+    verification,
+  };
 };
 
 export const verify_commodity_batch_tag_ai_service = async (

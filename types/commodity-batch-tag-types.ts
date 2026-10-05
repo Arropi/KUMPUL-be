@@ -1,4 +1,5 @@
 import type { CommodityBatchTag, NewCommodityBatchTag } from './database-types';
+import type { DocumentVerificationResult } from './ai-verification-types';
 
 export type StorageTemperatureType = 'AMBIENT' | 'CHILLED' | 'FROZEN';
 
@@ -26,6 +27,10 @@ export interface QualityVerificationResultDTO {
   legality_assessment: string;
   expiration_valid: boolean;
   verification_notes: string;
+}
+
+export interface CommodityBatchTagWithVerification extends CommodityBatchTag {
+  ai_verification?: DocumentVerificationResult | null;
 }
 
 export type CommodityBatchTagRecord = CommodityBatchTag;
