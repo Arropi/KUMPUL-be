@@ -10,7 +10,8 @@
     "@types/midtrans-client": "^1.4.0",
     "@types/node": "^26.6.3",
     "@types/swagger-jsdoc": "^6.0.4",
-    "@types/swagger-ui-express": "^4.1.8"
+    "@types/swagger-ui-express": "^4.1.8",
+    "bun-types": "^1.4.2"
   },
   "scripts": {
     "dev": "bun --watch index.ts",
