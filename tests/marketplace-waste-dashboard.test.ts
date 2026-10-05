@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
 import jwt from 'jsonwebtoken';
-import '../server';
+import '..';
 import { db } from '../config/db';
 import {
   business_entities,

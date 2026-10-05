@@ -1,6 +1,6 @@
 {
   "name": "be",
-  "module": "server.ts",
+  "module": "index.ts",
   "type": "module",
   "private": true,
   "devDependencies": {
@@ -15,9 +15,9 @@
     "typescript": "^7.0.2"
   },
   "scripts": {
-    "dev": "bun --watch server.ts",
-    "start": "bun server.ts",
-    "build": "bun x tsc --noEmit",
+    "dev": "bun --watch index.ts",
+    "start": "bun index.ts",
+    "build": "tsc --noEmit",
     "test": "bun test"
   },
   "peerDependencies": {
