@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
-import '../index';
+import '../server';
 import { db } from '../config/db';
 import {
   business_entities,
