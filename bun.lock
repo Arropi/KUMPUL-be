@@ -20,14 +20,13 @@
         "zod": "^4.6.5",
       },
       "devDependencies": {
-        "@types/bun": "latest",
+        "@types/bun": "^1.4.2",
         "@types/express": "^5.0.6",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/midtrans-client": "^1.4.0",
         "@types/node": "^26.6.3",
         "@types/swagger-jsdoc": "^6.0.4",
         "@types/swagger-ui-express": "^4.1.8",
-        "bun-types": "^1.4.2",
       },
       "peerDependencies": {
         "typescript": "^7.0.2",
