@@ -3,7 +3,7 @@ import type {
   BusinessEntityRecord,
   RoleType,
   SectorType,
-} from './profile-types';
+} from './profile-types.ts';
 
 export interface AuthUserPayload {
   user_id?: string;

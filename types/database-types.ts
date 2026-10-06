@@ -37,4 +37,4 @@ export type {
   NewOfftakerReferralLog,
   UmkmInventoryStock,
   NewUmkmInventoryStock,
-} from '../config/schema';
+} from '../config/schema.ts';

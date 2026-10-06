@@ -1,18 +1,18 @@
 import { eq, desc, inArray } from 'drizzle-orm';
-import { db } from '../../config/db';
+import { db } from '../../config/db.ts';
 import {
   umkm_products,
   recipe_details,
   business_roles,
   business_entities,
-} from '../../config/schema';
+} from '../../config/schema.ts';
 import type {
   ProductRecord,
   ProductInsertPayload,
   RecipeRecord,
   RecipeInsertPayload,
-} from '../../types/product-types';
-import type { BusinessRole, BusinessEntity } from '../../types/database-types';
+} from '../../types/product-types.ts';
+import type { BusinessRole, BusinessEntity } from '../../types/database-types.ts';
 
 export const find_business_role_by_id = async (
   role_id: string

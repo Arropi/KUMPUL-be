@@ -1,18 +1,18 @@
 import { eq, like, desc, inArray, and, sql } from 'drizzle-orm';
-import { db } from '../../config/db';
+import { db } from '../../config/db.ts';
 import {
   supplier_commodities,
   commodity_price_tiers,
   business_roles,
   business_entities,
-} from '../../config/schema';
+} from '../../config/schema.ts';
 import type {
   SupplierCommodityRecord,
   SupplierCommodityInsertPayload,
   CommodityPriceTierRecord,
   CommodityPriceTierInsertPayload,
-} from '../../types/supplier-catalog-types';
-import type { BusinessRole } from '../../types/database-types';
+} from '../../types/supplier-catalog-types.ts';
+import type { BusinessRole } from '../../types/database-types.ts';
 
 export const find_business_role_by_id = async (
   role_id: string

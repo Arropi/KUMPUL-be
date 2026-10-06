@@ -1,5 +1,5 @@
 import { and, desc, eq, ilike, inArray, lte, or, sql } from 'drizzle-orm';
-import { db } from '../../config/db';
+import { db } from '../../config/db.ts';
 import {
   business_entities,
   business_roles,
@@ -11,8 +11,8 @@ import {
   umkm_inventory_stocks,
   umkm_products,
   waste_listings,
-} from '../../config/schema';
-import type { MarketplaceFilterDTO } from '../../types/marketplace-types';
+} from '../../config/schema.ts';
+import type { MarketplaceFilterDTO } from '../../types/marketplace-types.ts';
 
 export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO) => {
   const page = filter.page && filter.page > 0 ? filter.page : 1;

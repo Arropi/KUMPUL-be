@@ -3,7 +3,7 @@ import {
   update_order_payment_status,
   update_procurement_order,
   find_expired_pending_procurement_orders,
-} from '../../repositories/orders/procurement-order-repositories';
+} from '../../repositories/orders/procurement-order-repositories.ts';
 import {
   insert_payment_transaction,
   find_payment_transaction_by_midtrans_order_id,
@@ -12,31 +12,31 @@ import {
   insert_escrow_transaction,
   find_escrow_by_order_reference_id,
   update_escrow_status,
-} from '../../repositories/payments/payment-repositories';
+} from '../../repositories/payments/payment-repositories.ts';
 import {
   find_consolidated_po_by_pool_id,
   update_consolidated_po_status,
   update_pool_participant,
-} from '../../repositories/orders/procurement-pool-repositories';
+} from '../../repositories/orders/procurement-pool-repositories.ts';
 import {
   find_waste_transaction_by_midtrans_order_id,
   update_waste_transaction,
   find_waste_listing_by_id,
   update_waste_listing,
-} from '../../repositories/waste/waste-repositories';
+} from '../../repositories/waste/waste-repositories.ts';
 import {
   create_snap_transaction,
   verify_midtrans_signature,
   check_midtrans_transaction_status,
-} from './midtrans-service';
-import { calculate_allocated_shipping } from '../orders/pre-order-service';
-import { AppError } from '../../middleware/error-middleware';
+} from './midtrans-service.ts';
+import { calculate_allocated_shipping } from '../orders/pre-order-service.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   SnapPaymentResponse,
   MidtransNotificationDTO,
   PaymentStatusResponse,
   ReleaseEscrowDTO,
-} from '../../types/payment-types';
+} from '../../types/payment-types.ts';
 
 export const initiate_order_payment_service = async (
   order_id: string,

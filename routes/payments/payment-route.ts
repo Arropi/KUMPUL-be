@@ -5,12 +5,12 @@ import {
   check_payment_status,
   release_escrow_funds,
   evaluate_expired_orders,
-} from '../../controllers/payments/payment-controller';
+} from '../../controllers/payments/payment-controller.ts';
 import {
   initiate_payment_validation,
   midtrans_notification_validation,
   release_escrow_validation,
-} from '../../validations/payments/payment-validation';
+} from '../../validations/payments/payment-validation.ts';
 
 const router = Router();
 

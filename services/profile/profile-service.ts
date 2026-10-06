@@ -1,4 +1,4 @@
-import { AppError } from '../../middleware/error-middleware';
+import { AppError } from '../../middleware/error-middleware.ts';
 import {
   find_entity_by_id,
   find_entity_by_id_or_auth_id,
@@ -12,7 +12,7 @@ import {
   delete_business_entity,
   find_entities_list,
   count_entities,
-} from '../../repositories/profile/profile-repositories';
+} from '../../repositories/profile/profile-repositories.ts';
 import type {
   CreateProfileDTO,
   UpdateProfileDTO,
@@ -23,7 +23,7 @@ import type {
   PaginatedProfileResult,
   BusinessEntityRecord,
   BusinessRoleRecord,
-} from '../../types/profile-types';
+} from '../../types/profile-types.ts';
 
 /**
  * Helper untuk memetakan entity record dan roles ke ProfileResponseDTO.

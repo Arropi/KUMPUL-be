@@ -3,9 +3,9 @@ import {
   get_marketplace_catalog_service,
   get_marketplace_commodity_detail_service,
   get_marketplace_recommendations_service,
-} from '../../services/products/marketplace-service';
-import type { StorageTemperatureType } from '../../types/commodity-batch-tag-types';
-import { get_authenticated_role_id } from '../../utils/auth-utils';
+} from '../../services/products/marketplace-service.ts';
+import type { StorageTemperatureType } from '../../types/commodity-batch-tag-types.ts';
+import { get_authenticated_role_id } from '../../utils/auth-utils.ts';
 
 export const get_marketplace_catalog = async (
   req: Request,

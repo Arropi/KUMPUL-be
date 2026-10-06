@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { check_db_connection } from '../config/db';
-import { AppError } from './error-middleware';
+import { check_db_connection } from '../config/db.ts';
+import { AppError } from './error-middleware.ts';
 
 let is_database_connected = false;
 let database_initialization_promise: Promise<void> | null = null;

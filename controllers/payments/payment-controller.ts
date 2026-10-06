@@ -5,7 +5,7 @@ import {
   check_and_sync_payment_status_service,
   release_escrow_funds_service,
   evaluate_expired_orders_service,
-} from '../../services/payments/payment-service';
+} from '../../services/payments/payment-service.ts';
 
 export const initiate_order_payment = async (
   req: Request,

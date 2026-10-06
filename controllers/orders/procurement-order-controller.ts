@@ -10,9 +10,9 @@ import {
   update_supplier_po_status_service,
   get_supplier_grouped_orders_service,
   get_umkm_all_orders_service,
-} from '../../services/orders/procurement-order-service';
-import { get_authenticated_role_id } from '../../utils/auth-utils';
-import { AppError } from '../../middleware/error-middleware';
+} from '../../services/orders/procurement-order-service.ts';
+import { get_authenticated_role_id } from '../../utils/auth-utils.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
 
 export const create_procurement_order = async (
   req: Request,

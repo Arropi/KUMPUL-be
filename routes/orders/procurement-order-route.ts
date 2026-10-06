@@ -10,16 +10,16 @@ import {
   update_supplier_po_status,
   get_supplier_grouped_orders,
   get_umkm_all_orders,
-} from '../../controllers/orders/procurement-order-controller';
+} from '../../controllers/orders/procurement-order-controller.ts';
 import {
   create_procurement_order_validation,
   uuid_param_validation,
-} from '../../validations/orders/procurement-order-validation';
+} from '../../validations/orders/procurement-order-validation.ts';
 import {
   authenticate_jwt,
   require_supplier,
   require_umkm,
-} from '../../middleware/auth-middleware';
+} from '../../middleware/auth-middleware.ts';
 
 const router = Router();
 

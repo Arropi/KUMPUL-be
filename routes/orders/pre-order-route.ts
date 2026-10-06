@@ -5,12 +5,12 @@ import {
   get_procurement_pool_by_id,
   join_procurement_pool,
   evaluate_pool_cutoffs,
-} from '../../controllers/orders/pre-order-controller';
+} from '../../controllers/orders/pre-order-controller.ts';
 import {
   create_procurement_pool_validation,
   join_procurement_pool_validation,
-} from '../../validations/orders/pre-order-validation';
-import { uuid_param_validation } from '../../validations/orders/procurement-order-validation';
+} from '../../validations/orders/pre-order-validation.ts';
+import { uuid_param_validation } from '../../validations/orders/procurement-order-validation.ts';
 
 const router = Router();
 

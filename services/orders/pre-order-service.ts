@@ -10,10 +10,10 @@ import {
   insert_pool_participant,
   insert_consolidated_po,
   find_pools_past_cutoff_or_expired,
-} from '../../repositories/orders/procurement-pool-repositories';
-import { update_commodity_by_id } from '../../repositories/products/supplier-catalog-repositories';
-import { insert_procurement_order } from '../../repositories/orders/procurement-order-repositories';
-import { AppError } from '../../middleware/error-middleware';
+} from '../../repositories/orders/procurement-pool-repositories.ts';
+import { update_commodity_by_id } from '../../repositories/products/supplier-catalog-repositories.ts';
+import { insert_procurement_order } from '../../repositories/orders/procurement-order-repositories.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   CreateProcurementPoolDTO,
   JoinProcurementPoolDTO,
@@ -22,7 +22,7 @@ import type {
   PoolParticipantRecord,
   PoolStatus,
   DeliveryMethod,
-} from '../../types/procurement-order-types';
+} from '../../types/procurement-order-types.ts';
 
 export const evaluate_pool_cutoffs_service = async (): Promise<{ updated_count: number }> => {
   const expired_pools = await find_pools_past_cutoff_or_expired();

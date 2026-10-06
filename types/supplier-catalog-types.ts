@@ -3,7 +3,7 @@ import type {
   NewSupplierCommodity,
   CommodityPriceTier,
   NewCommodityPriceTier,
-} from './database-types';
+} from './database-types.ts';
 
 export type WholesaleUnit = 'KARUNG' | 'SAK' | 'KRAT' | 'PAX' | 'BAL';
 

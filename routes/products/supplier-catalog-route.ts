@@ -9,13 +9,13 @@ import {
   publish_supplier_commodity,
   unpublish_supplier_commodity,
   get_marketplace_catalog,
-} from '../../controllers/products/supplier-catalog-controller';
+} from '../../controllers/products/supplier-catalog-controller.ts';
 import {
   create_supplier_commodity_validation,
   update_supplier_commodity_validation,
   get_supplier_commodity_by_id_validation,
-} from '../../validations/products/supplier-catalog-validation';
-import commodity_batch from "./commodity-batch-tag-route"
+} from '../../validations/products/supplier-catalog-validation.ts';
+import commodity_batch from "./commodity-batch-tag-route.ts"
 
 const router = Router();
 

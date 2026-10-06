@@ -9,14 +9,14 @@ import {
   get_waste_listing_detail,
   get_waste_listings,
   refer_listing_to_offtaker,
-} from '../../controllers/waste/waste-controller';
-import { authenticate_jwt } from '../../middleware/auth-middleware';
+} from '../../controllers/waste/waste-controller.ts';
+import { authenticate_jwt } from '../../middleware/auth-middleware.ts';
 import {
   buy_waste_validation,
   confirm_pickup_validation,
   create_waste_listing_validation,
   offtaker_referral_validation,
-} from '../../validations/waste/waste-validation';
+} from '../../validations/waste/waste-validation.ts';
 
 const router = Router();
 

@@ -3,9 +3,9 @@ import {
   snap_client,
   core_api_client,
   MIDTRANS_SERVER_KEY,
-} from '../../config/midtrans';
-import { AppError } from '../../middleware/error-middleware';
-import type { MidtransNotificationDTO } from '../../types/payment-types';
+} from '../../config/midtrans.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
+import type { MidtransNotificationDTO } from '../../types/payment-types.ts';
 
 export interface SnapTransactionParameter {
   transaction_details: {

@@ -1,5 +1,5 @@
 import { and, desc, eq, ilike, lte, sql } from 'drizzle-orm';
-import { db } from '../../config/db';
+import { db } from '../../config/db.ts';
 import {
   business_entities,
   business_roles,
@@ -12,8 +12,8 @@ import {
   type NewWasteTransaction,
   type WasteListing,
   type WasteTransaction,
-} from '../../config/schema';
-import type { WasteListingFilterDTO } from '../../types/waste-types';
+} from '../../config/schema.ts';
+import type { WasteListingFilterDTO } from '../../types/waste-types.ts';
 
 export const insert_waste_listing = async (
   payload: NewWasteListing

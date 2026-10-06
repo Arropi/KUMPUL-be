@@ -1,17 +1,17 @@
 import { eq, desc } from 'drizzle-orm';
-import { db } from '../../config/db';
+import { db } from '../../config/db.ts';
 import {
   umkm_procurement_orders,
   pool_participants,
   procurement_pools,
   supplier_commodities,
   business_roles,
-} from '../../config/schema';
+} from '../../config/schema.ts';
 import type {
   UmkmProcurementOrderRecord,
   UmkmProcurementOrderInsertPayload,
   PaymentStatus,
-} from '../../types/procurement-order-types';
+} from '../../types/procurement-order-types.ts';
 
 export const find_order_by_id = async (
   order_id: string

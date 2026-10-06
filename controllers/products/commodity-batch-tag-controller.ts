@@ -7,7 +7,7 @@ import {
   verify_batch_tag_with_ai_service,
   delete_commodity_batch_tag_service,
   verify_commodity_batch_tag_ai_service,
-} from '../../services/products/commodity-batch-tag-service';
+} from '../../services/products/commodity-batch-tag-service.ts';
 
 export const create_commodity_batch_tag = async (
   req: Request,

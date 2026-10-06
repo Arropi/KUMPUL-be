@@ -6,13 +6,13 @@ import {
   get_products_by_entity_id,
   update_product,
   delete_product,
-} from '../../controllers/products/product-controller';
+} from '../../controllers/products/product-controller.ts';
 import {
   create_product_validation,
   update_product_validation,
   id_param_validation,
-} from '../../validations/products/product-validation';
-import recipe_router from './recipe-route';
+} from '../../validations/products/product-validation.ts';
+import recipe_router from './recipe-route.ts';
 
 const router = Router();
 

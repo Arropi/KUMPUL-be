@@ -2,11 +2,11 @@ import { Router } from 'express';
 import {
   register_user_role,
   login_user,
-} from '../../controllers/auth/auth-controller';
+} from '../../controllers/auth/auth-controller.ts';
 import {
   register_user_validation,
   login_user_validation,
-} from '../../validations/auth/auth-validation';
+} from '../../validations/auth/auth-validation.ts';
 
 const router = Router();
 

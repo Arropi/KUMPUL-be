@@ -5,10 +5,10 @@ import {
   insert_commodity_batch_tag,
   update_commodity_batch_tag_by_id,
   delete_commodity_batch_tag_by_id,
-} from '../../repositories/products/commodity-batch-tag-repositories';
-import { verify_supplier_document_service } from '../ai/gemini-document-service';
-import { verify_commodity_quality_with_ai } from './commodity-ai-service';
-import { AppError } from '../../middleware/error-middleware';
+} from '../../repositories/products/commodity-batch-tag-repositories.ts';
+import { verify_supplier_document_service } from '../ai/gemini-document-service.ts';
+import { verify_commodity_quality_with_ai } from './commodity-ai-service.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   CreateCommodityBatchTagDTO,
   UpdateCommodityBatchTagDTO,
@@ -16,8 +16,8 @@ import type {
   CommodityBatchTagWithVerification,
   CommodityBatchTagInsertPayload,
   QualityVerificationResultDTO,
-} from '../../types/commodity-batch-tag-types';
-import type { DocumentVerificationResult } from '../../types/ai-verification-types';
+} from '../../types/commodity-batch-tag-types.ts';
+import type { DocumentVerificationResult } from '../../types/ai-verification-types.ts';
 
 export const create_commodity_batch_tag_service = async (
   payload: CreateCommodityBatchTagDTO

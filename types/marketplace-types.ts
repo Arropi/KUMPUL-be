@@ -1,4 +1,4 @@
-import type { StorageTemperatureType } from './commodity-batch-tag-types';
+import type { StorageTemperatureType } from './commodity-batch-tag-types.ts';
 
 export interface MarketplaceFilterDTO {
   search?: string;

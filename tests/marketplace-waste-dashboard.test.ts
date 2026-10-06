@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
 import jwt from 'jsonwebtoken';
-import '..';
-import { db } from '../config/db';
+import '../index.ts';
+import { db } from '../config/db.ts';
 import {
   business_entities,
   business_roles,
@@ -14,7 +14,7 @@ import {
   umkm_inventory_stocks,
   waste_listings,
   waste_transactions,
-} from '../config/schema';
+} from '../config/schema.ts';
 
 const BASE_URL = `http://localhost:${process.env.PORT || 3000}`;
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';

@@ -2,12 +2,12 @@ import { Router } from 'express';
 import {
   get_supplier_dashboard,
   get_umkm_dashboard,
-} from '../../controllers/dashboard/dashboard-controller';
+} from '../../controllers/dashboard/dashboard-controller.ts';
 import {
   authenticate_jwt,
   require_supplier,
   require_umkm,
-} from '../../middleware/auth-middleware';
+} from '../../middleware/auth-middleware.ts';
 
 const router = Router();
 

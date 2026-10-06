@@ -8,7 +8,7 @@ import {
   update_procurement_order,
   find_all_orders_for_umkm,
   find_grouped_orders_for_supplier,
-} from '../../repositories/orders/procurement-order-repositories';
+} from '../../repositories/orders/procurement-order-repositories.ts';
 import {
   find_participant_by_id,
   find_participants_by_pool_id,
@@ -17,12 +17,12 @@ import {
   find_consolidated_po_by_id,
   find_consolidated_pos_by_supplier,
   update_consolidated_po_status,
-} from '../../repositories/orders/procurement-pool-repositories';
-import { AppError } from '../../middleware/error-middleware';
+} from '../../repositories/orders/procurement-pool-repositories.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   CreateProcurementOrderDTO,
   UmkmProcurementOrderRecord,
-} from '../../types/procurement-order-types';
+} from '../../types/procurement-order-types.ts';
 
 export const create_procurement_order_service = async (
   payload: CreateProcurementOrderDTO
