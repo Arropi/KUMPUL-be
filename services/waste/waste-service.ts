@@ -1,4 +1,4 @@
-import { AppError } from '../../middleware/error-middleware';
+import { AppError } from '../../middleware/error-middleware.ts';
 import {
   find_all_offtakers,
   find_entity_by_role_id,
@@ -15,15 +15,15 @@ import {
   release_waste_escrow,
   update_waste_listing,
   update_waste_transaction,
-} from '../../repositories/waste/waste-repositories';
-import { create_snap_transaction } from '../payments/midtrans-service';
+} from '../../repositories/waste/waste-repositories.ts';
+import { create_snap_transaction } from '../payments/midtrans-service.ts';
 import type {
   BuyWasteListingDTO,
   CreateWasteListingDTO,
   NearestOfftakerQueryDTO,
   NearestOfftakerResult,
   WasteListingFilterDTO,
-} from '../../types/waste-types';
+} from '../../types/waste-types.ts';
 
 const calculate_haversine_distance = (
   lat1: number,

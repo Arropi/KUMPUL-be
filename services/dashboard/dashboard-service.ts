@@ -6,12 +6,12 @@ import {
   get_umkm_procurement_stats,
   get_umkm_recent_orders_list,
   get_umkm_recent_waste_listings_list,
-} from '../../repositories/dashboard/dashboard-repositories';
-import { find_market_price_benchmarks } from '../../repositories/products/marketplace-repositories';
+} from '../../repositories/dashboard/dashboard-repositories.ts';
+import { find_market_price_benchmarks } from '../../repositories/products/marketplace-repositories.ts';
 import type {
   SupplierDashboardSummary,
   UMKMDashboardSummary,
-} from '../../types/dashboard-types';
+} from '../../types/dashboard-types.ts';
 
 export const get_supplier_dashboard_service = async (
   supplier_role_id: string

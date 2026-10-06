@@ -1,4 +1,4 @@
-import { AppError } from '../../middleware/error-middleware';
+import { AppError } from '../../middleware/error-middleware.ts';
 import {
   find_active_pools_with_details,
   find_available_waste_listings_for_recommendation,
@@ -8,13 +8,13 @@ import {
   find_matching_commodities_by_names,
   find_popular_recipe_ingredients,
   find_umkm_low_stock_records,
-} from '../../repositories/products/marketplace-repositories';
+} from '../../repositories/products/marketplace-repositories.ts';
 import type {
   MarketplaceCommodityItem,
   MarketplaceFilterDTO,
   SupplierRecommendationResponse,
   UMKMRecommendationResponse,
-} from '../../types/marketplace-types';
+} from '../../types/marketplace-types.ts';
 
 export const get_marketplace_catalog_service = async (
   filter: MarketplaceFilterDTO

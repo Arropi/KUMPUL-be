@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
-import '..';
-import { db } from '../config/db';
+import '../index.ts';
+import { db } from '../config/db.ts';
 import {
   supplier_commodities,
   commodity_price_tiers,
   procurement_pools,
   escrow_transactions,
-} from '../config/schema';
+} from '../config/schema.ts';
 import crypto from 'crypto';
 
 const BASE_URL = `http://localhost:${process.env.PORT || 3030}`;

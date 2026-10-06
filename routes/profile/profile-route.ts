@@ -6,14 +6,14 @@ import {
   patch_profile,
   delete_profile,
   list_profiles,
-} from '../../controllers/profile/profile-controller';
+} from '../../controllers/profile/profile-controller.ts';
 import {
   create_profile_validation,
   update_profile_validation,
   patch_profile_validation,
   get_profile_by_id_validation,
   list_profiles_validation,
-} from '../../validations/profile/profile-validation';
+} from '../../validations/profile/profile-validation.ts';
 
 const router = Router();
 

@@ -1,5 +1,5 @@
 import { eq, desc, and, inArray, sql } from 'drizzle-orm';
-import { db } from '../../config/db';
+import { db } from '../../config/db.ts';
 import {
   procurement_pools,
   pool_participants,
@@ -7,7 +7,7 @@ import {
   supplier_commodities,
   commodity_price_tiers,
   business_roles,
-} from '../../config/schema';
+} from '../../config/schema.ts';
 import type {
   ProcurementPoolRecord,
   ProcurementPoolInsertPayload,
@@ -16,8 +16,8 @@ import type {
   ConsolidatedPORecord,
   ConsolidatedPOInsertPayload,
   PoolStatus,
-} from '../../types/procurement-order-types';
-import type { CommodityPriceTierRecord } from '../../types/supplier-catalog-types';
+} from '../../types/procurement-order-types.ts';
+import type { CommodityPriceTierRecord } from '../../types/supplier-catalog-types.ts';
 
 export const find_pool_by_id = async (
   pool_id: string

@@ -1,5 +1,5 @@
-import { AppError } from '../middleware/error-middleware';
-import type { PriceTierInputDTO } from '../types/supplier-catalog-types';
+import { AppError } from '../middleware/error-middleware.ts';
+import type { PriceTierInputDTO } from '../types/supplier-catalog-types.ts';
 
 /**
  * Validasi dan konversi tier harga komoditas grosir

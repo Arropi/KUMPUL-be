@@ -6,8 +6,8 @@ import {
   patch_profile_service,
   delete_profile_service,
   list_profiles_service,
-} from '../../services/profile/profile-service';
-import { AppError } from '../../middleware/error-middleware';
+} from '../../services/profile/profile-service.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
 
 /**
  * Controller untuk membuat profil entitas bisnis baru (POST /api/profile)

@@ -7,13 +7,13 @@ import {
   verify_commodity_batch_tag_with_ai,
   delete_commodity_batch_tag,
   verify_commodity_batch_tag_ai,
-} from '../../controllers/products/commodity-batch-tag-controller';
+} from '../../controllers/products/commodity-batch-tag-controller.ts';
 import {
   create_commodity_batch_tag_validation,
   update_commodity_batch_tag_validation,
   batch_tag_id_param_validation,
   commodity_batch_tags_by_commodity_validation,
-} from '../../validations/products/commodity-batch-tag-validation';
+} from '../../validations/products/commodity-batch-tag-validation.ts';
 
 const router = Router();
 

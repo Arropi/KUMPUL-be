@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
-import { db } from '../../config/db';
+import { db } from '../../config/db.ts';
 import {
   business_entities,
   business_roles,
@@ -14,7 +14,7 @@ import {
   umkm_products,
   waste_listings,
   waste_transactions,
-} from '../../config/schema';
+} from '../../config/schema.ts';
 
 export const get_supplier_overview_stats = async (supplier_role_id: string) => {
   const commodities_count = await db

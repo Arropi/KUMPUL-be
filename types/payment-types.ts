@@ -3,7 +3,7 @@ import type {
   NewPaymentTransaction,
   EscrowTransaction,
   NewEscrowTransaction,
-} from './database-types';
+} from './database-types.ts';
 
 export type EscrowType = 'PROCUREMENT_ESCROW' | 'WASTE_ESCROW';
 export type EscrowStatus = 'HELD' | 'RELEASED' | 'REFUNDED';

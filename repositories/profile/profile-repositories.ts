@@ -1,6 +1,6 @@
 import { eq, or, ilike, sql, desc, asc } from 'drizzle-orm';
-import { db } from '../../config/db';
-import { business_entities, business_roles } from '../../config/schema';
+import { db } from '../../config/db.ts';
+import { business_entities, business_roles } from '../../config/schema.ts';
 import type {
   BusinessEntityRecord,
   NewBusinessEntity,
@@ -8,7 +8,7 @@ import type {
   NewBusinessRole,
   RoleType,
   SectorType,
-} from '../../types/profile-types';
+} from '../../types/profile-types.ts';
 
 export const find_entity_by_id = async (
   entity_id: string

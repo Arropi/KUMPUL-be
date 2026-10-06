@@ -15,8 +15,8 @@ import {
   update_recipe_by_id,
   delete_recipe_by_id,
   delete_recipes_by_product_id,
-} from '../../repositories/products/product-repositories';
-import { AppError } from '../../middleware/error-middleware';
+} from '../../repositories/products/product-repositories.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   CreateProductDTO,
   UpdateProductDTO,
@@ -25,9 +25,9 @@ import type {
   CreateRecipeDTO,
   UpdateRecipeDTO,
   RecipeRecord,
-} from '../../types/product-types';
+} from '../../types/product-types.ts';
 
-import { recalculate_product_financials } from './recipe-service';
+import { recalculate_product_financials } from './recipe-service.ts';
 
 
 // ==========================================
@@ -244,5 +244,5 @@ export {
   list_recipes_by_product_service,
   update_recipe_service,
   delete_recipe_service,
-} from './recipe-service';
+} from './recipe-service.ts';
 

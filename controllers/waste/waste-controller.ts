@@ -9,9 +9,9 @@ import {
   get_waste_listing_detail_service,
   get_waste_listings_service,
   refer_listing_to_offtaker_service,
-} from '../../services/waste/waste-service';
-import type { WasteCategoryType, WasteListingStatusType } from '../../types/waste-types';
-import { get_authenticated_role_id } from '../../utils/auth-utils';
+} from '../../services/waste/waste-service.ts';
+import type { WasteCategoryType, WasteListingStatusType } from '../../types/waste-types.ts';
+import { get_authenticated_role_id } from '../../utils/auth-utils.ts';
 
 export const create_waste_listing = async (
   req: Request,

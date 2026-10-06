@@ -1,20 +1,20 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
-import { db } from '../config/db';
+import { db } from '../config/db.ts';
 import {
   business_entities,
   business_roles,
   supplier_commodities,
   commodity_batch_tags,
-} from '../config/schema';
+} from '../config/schema.ts';
 import { eq } from 'drizzle-orm';
 import {
   create_commodity_batch_tag_service,
   verify_batch_tag_with_ai_service,
   get_commodity_batch_tag_by_id_service,
   delete_commodity_batch_tag_service,
-} from '../services/products/commodity-batch-tag-service';
-import { verify_supplier_document_service } from '../services/ai/gemini-document-service';
-import { swagger_spec } from '../config/swagger';
+} from '../services/products/commodity-batch-tag-service.ts';
+import { verify_supplier_document_service } from '../services/ai/gemini-document-service.ts';
+import { swagger_spec } from '../config/swagger.ts';
 
 let test_entity_id = '';
 let test_supplier_role_id = '';

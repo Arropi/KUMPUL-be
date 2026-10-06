@@ -1,4 +1,4 @@
-import type { QualityVerificationResultDTO } from '../../types/commodity-batch-tag-types';
+import type { QualityVerificationResultDTO } from '../../types/commodity-batch-tag-types.ts';
 
 const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
 

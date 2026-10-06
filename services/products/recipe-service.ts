@@ -6,13 +6,13 @@ import {
   insert_recipe,
   update_recipe_by_id,
   delete_recipe_by_id,
-} from '../../repositories/products/product-repositories';
-import { AppError } from '../../middleware/error-middleware';
+} from '../../repositories/products/product-repositories.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   CreateRecipeDTO,
   UpdateRecipeDTO,
   RecipeRecord,
-} from '../../types/product-types';
+} from '../../types/product-types.ts';
 
 /**
  * Helper untuk menghitung ulang HPP dan Margin Produk secara otomatis berdasarkan komponen resep.

@@ -7,12 +7,12 @@ import {
   update_supplier_commodity_service,
   delete_supplier_commodity_service,
   get_commodities_by_entity_id_service,
-} from '../../services/products/supplier-catalog-service';
+} from '../../services/products/supplier-catalog-service.ts';
 import {
   publish_commodity_service,
   unpublish_commodity_service,
   get_marketplace_catalog_service,
-} from '../../services/products/catalog-publish-service';
+} from '../../services/products/catalog-publish-service.ts';
 
 export const create_supplier_commodity = async (
   req: Request,

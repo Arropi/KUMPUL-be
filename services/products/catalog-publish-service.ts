@@ -4,20 +4,20 @@ import {
   find_active_marketplace_commodities,
   find_price_tiers_by_commodity_ids,
   find_business_roles_with_entities_by_role_ids,
-} from '../../repositories/products/supplier-catalog-repositories';
+} from '../../repositories/products/supplier-catalog-repositories.ts';
 import {
   find_batch_tags_by_commodity_id,
   find_batch_tags_by_commodity_ids,
-} from '../../repositories/products/commodity-batch-tag-repositories';
+} from '../../repositories/products/commodity-batch-tag-repositories.ts';
 import {
   find_active_pools_by_commodity_id,
   find_active_pools_by_commodity_ids,
   insert_procurement_pool,
-} from '../../repositories/orders/procurement-pool-repositories';
-import { AppError } from '../../middleware/error-middleware';
-import type { SupplierCommodityRecord } from '../../types/supplier-catalog-types';
-import type { CommodityBatchTagRecord } from '../../types/commodity-batch-tag-types';
-import type { ProcurementPoolRecord } from '../../types/procurement-order-types';
+} from '../../repositories/orders/procurement-pool-repositories.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
+import type { SupplierCommodityRecord } from '../../types/supplier-catalog-types.ts';
+import type { CommodityBatchTagRecord } from '../../types/commodity-batch-tag-types.ts';
+import type { ProcurementPoolRecord } from '../../types/procurement-order-types.ts';
 
 export interface PublishCommodityResponse {
   commodity: SupplierCommodityRecord;

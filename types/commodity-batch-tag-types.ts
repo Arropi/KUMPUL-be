@@ -1,5 +1,5 @@
-import type { CommodityBatchTag, NewCommodityBatchTag } from './database-types';
-import type { DocumentVerificationResult } from './ai-verification-types';
+import type { CommodityBatchTag, NewCommodityBatchTag } from './database-types.ts';
+import type { DocumentVerificationResult } from './ai-verification-types.ts';
 
 export type StorageTemperatureType = 'AMBIENT' | 'CHILLED' | 'FROZEN';
 

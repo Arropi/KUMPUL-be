@@ -1,6 +1,6 @@
 import { Type } from '@google/genai';
-import { gemini_client, DEFAULT_GEMINI_MODEL, GEMINI_API_KEY } from '../../config/gemini';
-import type { DocumentVerificationResult, VerifyDocumentInput } from '../../types/ai-verification-types';
+import { gemini_client, DEFAULT_GEMINI_MODEL, GEMINI_API_KEY } from '../../config/gemini.ts';
+import type { DocumentVerificationResult, VerifyDocumentInput } from '../../types/ai-verification-types.ts';
 
 /**
  * Memverifikasi dokumen pendukung supplier (kebersihan, keamanan pangan, atau legalitas usaha)

@@ -1,7 +1,7 @@
 import type { Request } from 'express';
-import { AppError } from '../middleware/error-middleware';
-import { find_active_role_by_entity_and_type } from '../repositories/profile/profile-repositories';
-import type { RoleType } from '../types/profile-types';
+import { AppError } from '../middleware/error-middleware.ts';
+import { find_active_role_by_entity_and_type } from '../repositories/profile/profile-repositories.ts';
+import type { RoleType } from '../types/profile-types.ts';
 
 export const get_authenticated_role_id = async (
   req: Request,

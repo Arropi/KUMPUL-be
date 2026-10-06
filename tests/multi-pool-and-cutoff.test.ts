@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
-import '..';
-import { db } from '../config/db';
+import '../index.ts';
+import { db } from '../config/db.ts';
 import {
   business_entities,
   business_roles,
@@ -8,7 +8,7 @@ import {
   procurement_pools,
   pool_participants,
   consolidated_pos,
-} from '../config/schema';
+} from '../config/schema.ts';
 
 const BASE_URL = `http://localhost:${process.env.PORT || 3030}`;
 

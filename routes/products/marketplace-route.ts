@@ -3,9 +3,9 @@ import {
   get_marketplace_catalog,
   get_marketplace_commodity_detail,
   get_marketplace_recommendations,
-} from '../../controllers/products/marketplace-controller';
-import { authenticate_jwt } from '../../middleware/auth-middleware';
-import { get_marketplace_catalog_validation } from '../../validations/products/marketplace-validation';
+} from '../../controllers/products/marketplace-controller.ts';
+import { authenticate_jwt } from '../../middleware/auth-middleware.ts';
+import { get_marketplace_catalog_validation } from '../../validations/products/marketplace-validation.ts';
 
 const router = Router();
 

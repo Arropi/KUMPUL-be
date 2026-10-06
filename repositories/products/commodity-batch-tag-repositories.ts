@@ -1,11 +1,11 @@
 import { eq, desc, inArray } from 'drizzle-orm';
-import { db } from '../../config/db';
-import { commodity_batch_tags, supplier_commodities } from '../../config/schema';
+import { db } from '../../config/db.ts';
+import { commodity_batch_tags, supplier_commodities } from '../../config/schema.ts';
 import type {
   CommodityBatchTagRecord,
   CommodityBatchTagInsertPayload,
-} from '../../types/commodity-batch-tag-types';
-import type { SupplierCommodityRecord } from '../../types/supplier-catalog-types';
+} from '../../types/commodity-batch-tag-types.ts';
+import type { SupplierCommodityRecord } from '../../types/supplier-catalog-types.ts';
 
 export const find_commodity_batch_tag_by_id = async (
   tag_id: string

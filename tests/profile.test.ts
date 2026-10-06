@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
-import '..';
-import { swagger_spec } from '../config/swagger';
-import { db } from '../config/db';
+import '../index.ts';
+import { swagger_spec } from '../config/swagger.ts';
+import { db } from '../config/db.ts';
 import { sql } from 'drizzle-orm';
 
 const BASE_URL = `http://localhost:${process.env.PORT || 3030}`;

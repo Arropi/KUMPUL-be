@@ -7,7 +7,7 @@ import type {
   NewConsolidatedPO,
   UmkmProcurementOrder,
   NewUmkmProcurementOrder,
-} from './database-types';
+} from './database-types.ts';
 
 export type PoolStatus = 'OPEN' | 'AGGREGATING' | 'LOCKED' | 'COMPLETED' | 'FAILED';
 export type DeliveryMethod = 'HEMAT_HUB' | 'DIRECT_DOOR_TO_DOOR';

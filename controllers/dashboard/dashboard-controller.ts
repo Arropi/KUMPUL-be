@@ -2,8 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import {
   get_supplier_dashboard_service,
   get_umkm_dashboard_service,
-} from '../../services/dashboard/dashboard-service';
-import { get_authenticated_role_id } from '../../utils/auth-utils';
+} from '../../services/dashboard/dashboard-service.ts';
+import { get_authenticated_role_id } from '../../utils/auth-utils.ts';
 
 export const get_supplier_dashboard = async (
   req: Request,

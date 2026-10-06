@@ -1,17 +1,17 @@
 import { eq, desc } from 'drizzle-orm';
-import { db } from '../../config/db';
+import { db } from '../../config/db.ts';
 import {
   payment_transactions,
   escrow_transactions,
   umkm_procurement_orders,
-} from '../../config/schema';
+} from '../../config/schema.ts';
 import type {
   PaymentTransactionRecord,
   PaymentTransactionInsertPayload,
   EscrowTransactionRecord,
   EscrowTransactionInsertPayload,
   EscrowStatus,
-} from '../../types/payment-types';
+} from '../../types/payment-types.ts';
 
 export const insert_payment_transaction = async (
   payload: PaymentTransactionInsertPayload

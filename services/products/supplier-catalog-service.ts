@@ -15,16 +15,16 @@ import {
   activate_due_harvest_commodities,
   find_entity_by_id,
   find_commodities_by_entity_id,
-} from '../../repositories/products/supplier-catalog-repositories';
-import { generate_sku_from_name } from '../../utils/sku-utils';
-import { format_and_validate_price_tiers } from '../../utils/tier-utils';
-import { AppError } from '../../middleware/error-middleware';
+} from '../../repositories/products/supplier-catalog-repositories.ts';
+import { generate_sku_from_name } from '../../utils/sku-utils.ts';
+import { format_and_validate_price_tiers } from '../../utils/tier-utils.ts';
+import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   CreateSupplierCommodityDTO,
   UpdateSupplierCommodityDTO,
   SupplierCommodityWithTiers,
   SupplierCommodityInsertPayload,
-} from '../../types/supplier-catalog-types';
+} from '../../types/supplier-catalog-types.ts';
 
 /**
  * Menghasilkan SKU unik dengan suffix counter bertahap jika terjadi kolisi

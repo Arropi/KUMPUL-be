@@ -1,5 +1,7 @@
 import swagger_jsdoc from 'swagger-jsdoc';
+import { fileURLToPath } from 'node:url';
 
+const ROUTES_DIR = fileURLToPath(new URL('../routes', import.meta.url)).replace(/\\/g, '/');
 const DEFAULT_SERVER_PORT = 3000;
 const current_port = process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_SERVER_PORT;
 
@@ -46,7 +48,8 @@ const swagger_options: swagger_jsdoc.Options = {
       { name: 'Dashboards', description: 'Dashboard Eksekutif & Analitik Bisnis Supplier & UMKM' },
     ],
   },
-  apis: ['./routes/**/*.ts', './routes/*.ts'],
+  // Lokal (Bun) membaca file .ts, sedangkan Vercel hanya memuat hasil kompilasi .js
+  apis: [`${ROUTES_DIR}/**/*.ts`, `${ROUTES_DIR}/**/*.js`],
 };
 
 export const swagger_spec = swagger_jsdoc(swagger_options);

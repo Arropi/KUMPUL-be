@@ -1,5 +1,5 @@
 import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
-import type { business_entities, business_roles } from '../config/schema';
+import type { business_entities, business_roles } from '../config/schema.ts';
 
 export type RoleType = 'SUPPLIER' | 'UMKM';
 

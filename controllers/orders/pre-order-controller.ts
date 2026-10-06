@@ -5,8 +5,8 @@ import {
   get_procurement_pool_by_id_service,
   join_procurement_pool_service,
   evaluate_pool_cutoffs_service,
-} from '../../services/orders/pre-order-service';
-import type { PoolStatus } from '../../types/procurement-order-types';
+} from '../../services/orders/pre-order-service.ts';
+import type { PoolStatus } from '../../types/procurement-order-types.ts';
 
 export const create_procurement_pool = async (
   req: Request,
