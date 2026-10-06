@@ -23,6 +23,11 @@ export interface SnapTransactionParameter {
     email?: string;
     phone?: string;
   };
+  expiry?: {
+    start_time?: string;
+    unit?: string;
+    duration?: number;
+  };
 }
 
 export const create_snap_transaction = async (
@@ -38,7 +43,15 @@ export const create_snap_transaction = async (
   }
 
   try {
-    const snap_response = await snap_client.createTransaction(params);
+    const payload_with_expiry = {
+      ...params,
+      expiry: params.expiry ?? {
+        unit: 'hours',
+        duration: 12,
+      },
+    };
+
+    const snap_response = await snap_client.createTransaction(payload_with_expiry);
 
     if (!snap_response || !snap_response.token) {
       throw new Error('Midtrans Snap tidak mengembalikan token transaksi yang valid');

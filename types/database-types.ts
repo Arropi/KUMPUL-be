@@ -35,4 +35,6 @@ export type {
   NewWasteTransaction,
   OfftakerReferralLog,
   NewOfftakerReferralLog,
+  UmkmInventoryStock,
+  NewUmkmInventoryStock,
 } from '../config/schema';

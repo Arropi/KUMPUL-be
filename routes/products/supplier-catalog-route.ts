@@ -6,6 +6,9 @@ import {
   update_supplier_commodity,
   delete_supplier_commodity,
   get_supplier_commodities_by_entity_id,
+  publish_supplier_commodity,
+  unpublish_supplier_commodity,
+  get_marketplace_catalog,
 } from '../../controllers/products/supplier-catalog-controller';
 import {
   create_supplier_commodity_validation,
@@ -16,7 +19,31 @@ import commodity_batch from "./commodity-batch-tag-route"
 
 const router = Router();
 
-router.use("/batch",commodity_batch )
+router.use("/batch", commodity_batch);
+
+/**
+ * @swagger
+ * /api/supplier-catalogs/marketplace:
+ *   get:
+ *     summary: Mendapatkan katalog komoditas publik aktif di Marketplace
+ *     description: Mengembalikan daftar komoditas yang sedang aktif dipublikasikan, dilengkapi info stok tersedia, tiering harga, sertifikasi mutu batch terverifikasi AI, dan pool aktif.
+ *     tags: [SupplierCatalogs]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Katalog marketplace berhasil diambil
+ */
+router.get('/marketplace', get_marketplace_catalog);
 /**
  * @swagger
  * /api/supplier-catalogs:
@@ -289,5 +316,53 @@ router.put('/:id', update_supplier_commodity_validation, update_supplier_commodi
  *         description: Komoditas katalog tidak ditemukan
  */
 router.delete('/:id', get_supplier_commodity_by_id_validation, delete_supplier_commodity);
+
+/**
+ * @swagger
+ * /api/supplier-catalogs/{id}/publish:
+ *   post:
+ *     summary: Mempublikasikan komoditas ke etalase Marketplace publik
+ *     description: Memvalidasi ketersediaan stok, rentang tanggal panen hingga expired (production_date < closed_date), merangkum status mutu batch tag, mengaktifkan status publik, dan menginisialisasi procurement pool aktif.
+ *     tags: [SupplierCatalogs]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID UUID komoditas yang akan dipublikasikan
+ *     responses:
+ *       200:
+ *         description: Komoditas berhasil dipublikasikan ke Marketplace
+ *       400:
+ *         description: Validasi gagal (misal tanggal panen belum diisi atau stok kosong)
+ *       404:
+ *         description: Komoditas tidak ditemukan
+ */
+router.post('/:id/publish', get_supplier_commodity_by_id_validation, publish_supplier_commodity);
+
+/**
+ * @swagger
+ * /api/supplier-catalogs/{id}/unpublish:
+ *   post:
+ *     summary: Menarik komoditas dari etalase Marketplace publik
+ *     description: Menonaktifkan visibilitas komoditas di marketplace (is_marketplace_active = false).
+ *     tags: [SupplierCatalogs]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID UUID komoditas yang akan ditarik
+ *     responses:
+ *       200:
+ *         description: Komoditas berhasil ditarik dari Marketplace
+ *       404:
+ *         description: Komoditas tidak ditemukan
+ */
+router.post('/:id/unpublish', get_supplier_commodity_by_id_validation, unpublish_supplier_commodity);
 
 export default router;

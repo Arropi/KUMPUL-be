@@ -1,4 +1,4 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, inArray, sql } from 'drizzle-orm';
 import { db } from '../../config/db';
 import {
   procurement_pools,
@@ -48,16 +48,52 @@ export const find_active_pools_by_commodity_id = async (
   return records;
 };
 
+export const find_active_pools_by_commodity_ids = async (
+  commodity_ids: string[]
+): Promise<Record<string, ProcurementPoolRecord>> => {
+  if (commodity_ids.length === 0) {
+    return {};
+  }
+  const records = await db
+    .select()
+    .from(procurement_pools)
+    .where(
+      and(
+        inArray(procurement_pools.commodity_id, commodity_ids),
+        eq(procurement_pools.pool_status, 'OPEN')
+      )
+    )
+    .orderBy(desc(procurement_pools.created_at));
+
+  const pool_by_commodity: Record<string, ProcurementPoolRecord> = {};
+  for (const pool_item of records) {
+    if (!pool_by_commodity[pool_item.commodity_id]) {
+      pool_by_commodity[pool_item.commodity_id] = pool_item;
+    }
+  }
+
+  return pool_by_commodity;
+};
+
 export const find_pools_by_status = async (
   status?: PoolStatus,
   limit_count = 20,
-  offset_count = 0
+  offset_count = 0,
+  commodity_id?: string
 ): Promise<ProcurementPoolRecord[]> => {
+  const conditions = [];
   if (status) {
+    conditions.push(eq(procurement_pools.pool_status, status));
+  }
+  if (commodity_id) {
+    conditions.push(eq(procurement_pools.commodity_id, commodity_id));
+  }
+
+  if (conditions.length > 0) {
     return await db
       .select()
       .from(procurement_pools)
-      .where(eq(procurement_pools.pool_status, status))
+      .where(and(...conditions))
       .orderBy(desc(procurement_pools.created_at))
       .limit(limit_count)
       .offset(offset_count);
@@ -69,6 +105,20 @@ export const find_pools_by_status = async (
     .orderBy(desc(procurement_pools.created_at))
     .limit(limit_count)
     .offset(offset_count);
+};
+
+export const find_pools_past_cutoff_or_expired = async (): Promise<ProcurementPoolRecord[]> => {
+  const current_date_string = new Date().toISOString().slice(0, 10);
+  const records = await db
+    .select()
+    .from(procurement_pools)
+    .where(
+      and(
+        eq(procurement_pools.pool_status, 'OPEN'),
+        sql`(${procurement_pools.cutoff_date} <= ${current_date_string}::date OR ${procurement_pools.expires_at} <= NOW())`
+      )
+    );
+  return records;
 };
 
 export const insert_procurement_pool = async (
@@ -159,6 +209,19 @@ export const insert_pool_participant = async (
   return data;
 };
 
+export const update_pool_participant = async (
+  participant_id: string,
+  payload: Partial<PoolParticipantInsertPayload>
+): Promise<PoolParticipantRecord | null> => {
+  const updated = await db
+    .update(pool_participants)
+    .set(payload)
+    .where(eq(pool_participants.id, participant_id))
+    .returning();
+
+  return updated[0] ?? null;
+};
+
 // ==========================================
 // CONSOLIDATED POS REPOSITORY
 // ==========================================
@@ -173,6 +236,34 @@ export const find_consolidated_po_by_pool_id = async (
     .limit(1);
 
   return records[0] ?? null;
+};
+
+export const find_consolidated_po_by_id = async (
+  po_id: string
+): Promise<ConsolidatedPORecord | null> => {
+  const records = await db
+    .select()
+    .from(consolidated_pos)
+    .where(eq(consolidated_pos.id, po_id))
+    .limit(1);
+
+  return records[0] ?? null;
+};
+
+export const find_consolidated_pos_by_supplier = async (
+  supplier_role_id: string,
+  limit_count = 20,
+  offset_count = 0
+): Promise<ConsolidatedPORecord[]> => {
+  const records = await db
+    .select()
+    .from(consolidated_pos)
+    .where(eq(consolidated_pos.supplier_role_id, supplier_role_id))
+    .orderBy(desc(consolidated_pos.created_at))
+    .limit(limit_count)
+    .offset(offset_count);
+
+  return records;
 };
 
 export const insert_consolidated_po = async (

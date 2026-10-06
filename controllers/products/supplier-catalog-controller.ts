@@ -8,6 +8,11 @@ import {
   delete_supplier_commodity_service,
   get_commodities_by_entity_id_service,
 } from '../../services/products/supplier-catalog-service';
+import {
+  publish_commodity_service,
+  unpublish_commodity_service,
+  get_marketplace_catalog_service,
+} from '../../services/products/catalog-publish-service';
 
 export const create_supplier_commodity = async (
   req: Request,
@@ -26,6 +31,7 @@ export const create_supplier_commodity = async (
       image_url: req.body.image_url,
       description: req.body.description,
       production_date: req.body.production_date ?? req.body.estimated_harvest_date ?? req.body.estimated_harvest_day,
+      closed_date: req.body.closed_date,
       auto_activate_marketplace: req.body.auto_activate_marketplace,
       allows_under_moq: req.body.allows_under_moq,
       under_moq_price_per_kg: req.body.under_moq_price_per_kg,
@@ -115,6 +121,7 @@ export const update_supplier_commodity = async (
       image_url: req.body.image_url,
       description: req.body.description,
       production_date: req.body.production_date ?? req.body.estimated_harvest_date ?? req.body.estimated_harvest_day,
+      closed_date: req.body.closed_date,
       auto_activate_marketplace: req.body.auto_activate_marketplace,
       allows_under_moq: req.body.allows_under_moq,
       under_moq_price_per_kg: req.body.under_moq_price_per_kg,
@@ -168,6 +175,64 @@ export const get_supplier_commodities_by_entity_id = async (
       status: 'success',
       message: 'Daftar komoditas entitas bisnis berhasil diambil',
       data: commodities_data,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const publish_supplier_commodity = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const commodity_id = req.params.id as string;
+    const publish_result = await publish_commodity_service(commodity_id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Komoditas berhasil dipublikasikan ke Marketplace publik',
+      data: publish_result,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const unpublish_supplier_commodity = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const commodity_id = req.params.id as string;
+    const unpublished_item = await unpublish_commodity_service(commodity_id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Komoditas berhasil ditarik dari Marketplace publik',
+      data: unpublished_item,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const get_marketplace_catalog = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
+    const catalog = await get_marketplace_catalog_service(limit, offset);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Katalog komoditas marketplace berhasil diambil',
+      data: catalog,
     });
   } catch (controller_error) {
     next(controller_error);
