@@ -18,6 +18,10 @@ import {
 } from '../../repositories/products/supplier-catalog-repositories.ts';
 import { generate_sku_from_name } from '../../utils/sku-utils.ts';
 import { format_and_validate_price_tiers } from '../../utils/tier-utils.ts';
+import {
+  find_batch_tags_by_commodity_id,
+  delete_batch_tags_by_commodity_id,
+} from '../../repositories/products/commodity-batch-tag-repositories.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   CreateSupplierCommodityDTO,
@@ -152,10 +156,18 @@ export const get_supplier_commodity_by_id_service = async (
     throw new AppError('Komoditas katalog supplier tidak ditemukan', 404, 'COMMODITY_NOT_FOUND');
   }
 
-  const price_tiers = await find_price_tiers_by_commodity_id(commodity_id);
+  const [price_tiers, batch_tags] = await Promise.all([
+    find_price_tiers_by_commodity_id(commodity_id),
+    find_batch_tags_by_commodity_id(commodity_id),
+  ]);
+
+  const latest_batch_tag = batch_tags && batch_tags.length > 0 ? batch_tags[0] : null;
+
   return {
     ...commodity,
     price_tiers,
+    batch_tag: latest_batch_tag,
+    batch_tags,
   };
 };
 
@@ -261,6 +273,7 @@ export const delete_supplier_commodity_service = async (commodity_id: string): P
   }
 
   await delete_price_tiers_by_commodity_id(commodity_id);
+  await delete_batch_tags_by_commodity_id(commodity_id);
   const is_deleted = await delete_commodity_by_id(commodity_id);
   if (!is_deleted) {
     throw new AppError('Gagal menghapus komoditas katalog', 500, 'DELETE_FAILED');

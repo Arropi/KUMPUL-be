@@ -46,6 +46,7 @@ const create_profile_raw_schema = z
     latitude: z.coerce.number().optional(),
     long: z.coerce.number().optional(),
     longitude: z.coerce.number().optional(),
+    phone_number: z.string().max(20, 'Nomor telepon maksimal 20 karakter').optional(),
     bank_account_info: bank_account_schema.optional().default({}),
     profile: z.string().url('Format URL foto profil tidak valid').or(z.literal('')).optional().nullable(),
     profile_picture_url: z.string().url('Format URL foto profil tidak valid').or(z.literal('')).optional().nullable(),
@@ -86,6 +87,7 @@ export const create_profile_validation = (
     const npwp = (parsed.npwp || parsed.npwp_nib)!.trim();
     const latitude = parsed.lat !== undefined ? parsed.lat : parsed.latitude!;
     const longitude = parsed.long !== undefined ? parsed.long : parsed.longitude!;
+    const phone_number = parsed.phone_number ?? null;
     const profile_picture_url = parsed.profile || parsed.profile_picture_url || null;
     const storage_capacity = parsed.storage !== undefined ? parsed.storage : (parsed.storage_capacity ?? 0);
     const sector_type = parsed.sector ?? parsed.sector_type ?? null;
@@ -99,6 +101,7 @@ export const create_profile_validation = (
       default_address: parsed.default_address.trim(),
       latitude,
       longitude,
+      phone_number,
       bank_account_info: parsed.bank_account_info ?? {},
       profile_picture_url,
       storage_capacity,
@@ -126,6 +129,7 @@ const update_profile_raw_schema = z.object({
   latitude: z.coerce.number().optional(),
   long: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
+  phone_number: z.string().max(20, 'Nomor telepon maksimal 20 karakter').optional(),
   bank_account_info: bank_account_schema.optional(),
   profile: z.string().url('Format URL foto profil tidak valid').or(z.literal('')).optional().nullable(),
   profile_picture_url: z.string().url('Format URL foto profil tidak valid').or(z.literal('')).optional().nullable(),
@@ -150,6 +154,7 @@ export const update_profile_validation = (
     const npwp = parsed.npwp || parsed.npwp_nib;
     const latitude = parsed.lat !== undefined ? parsed.lat : parsed.latitude;
     const longitude = parsed.long !== undefined ? parsed.long : parsed.longitude;
+    const phone_number = parsed.phone_number;
     const profile_picture_url = parsed.profile !== undefined ? parsed.profile : parsed.profile_picture_url;
     const storage_capacity = parsed.storage !== undefined ? parsed.storage : parsed.storage_capacity;
     const sector_type = parsed.sector !== undefined ? parsed.sector : parsed.sector_type;
@@ -161,6 +166,7 @@ export const update_profile_validation = (
       ...(parsed.default_address !== undefined ? { default_address: parsed.default_address } : {}),
       ...(latitude !== undefined ? { latitude } : {}),
       ...(longitude !== undefined ? { longitude } : {}),
+      ...(phone_number !== undefined ? { phone_number } : {}),
       ...(parsed.bank_account_info !== undefined ? { bank_account_info: parsed.bank_account_info } : {}),
       ...(profile_picture_url !== undefined ? { profile_picture_url } : {}),
       ...(storage_capacity !== undefined ? { storage_capacity } : {}),
@@ -227,3 +233,74 @@ export const list_profiles_validation = (
     next(validation_error);
   }
 };
+
+/**
+ * Validasi untuk penambahan peran usaha baru (POST /roles)
+ */
+const create_role_schema = z.object({
+  entity_id: z.string().uuid('entity_id harus berformat UUID').optional(),
+  role_type: role_enum,
+  sector_type: sector_enum.optional().nullable(),
+  storage_capacity: z.coerce.number().int().min(0).optional().default(0),
+  is_active: z.boolean().optional().default(true),
+});
+
+export const create_business_role_validation = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  try {
+    req.body = create_role_schema.parse(req.body);
+    next();
+  } catch (validation_error) {
+    next(validation_error);
+  }
+};
+
+/**
+ * Validasi untuk pembaruan peran usaha (PUT /roles/:role_id)
+ */
+const update_role_schema = z.object({
+  sector_type: sector_enum.optional().nullable(),
+  storage_capacity: z.coerce.number().int().min(0).optional(),
+  is_active: z.boolean().optional(),
+  role_type: role_enum.optional(),
+});
+
+export const update_business_role_validation = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  try {
+    req.body = update_role_schema.parse(req.body);
+    next();
+  } catch (validation_error) {
+    next(validation_error);
+  }
+};
+
+/**
+ * Validasi parameter role_id (DELETE/PUT /roles/:role_id)
+ */
+const role_param_schema = z.object({
+  role_id: z.string().uuid('role_id harus berformat UUID').optional(),
+  id: z.string().uuid('id harus berformat UUID').optional(),
+}).refine((data) => data.role_id || data.id, {
+  message: 'role_id atau id harus berupa UUID valid',
+});
+
+export const delete_business_role_validation = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  try {
+    role_param_schema.parse(req.params);
+    next();
+  } catch (validation_error) {
+    next(validation_error);
+  }
+};
+

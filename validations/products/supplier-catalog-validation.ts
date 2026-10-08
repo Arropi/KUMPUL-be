@@ -52,6 +52,41 @@ const price_tier_schema = z
     }
   });
 
+export const ALL_WHOLESALE_UNITS = [
+  'KARUNG',
+  'SAK',
+  'KRAT',
+  'PAX',
+  'BAL',
+  'KG',
+  'GRAM',
+  'TON',
+  'KUINTAL',
+  'LITER',
+  'ML',
+  'KUBIK',
+  'PCS',
+  'PACK',
+  'DUS',
+  'BOX',
+  'KARTON',
+  'BOTOL',
+  'KALENG',
+  'TRAY',
+  'KERANJANG',
+  'BASKOM',
+  'EKOR',
+  'BUTIR',
+  'LEMBAR',
+  'IKAT',
+  'PORSI',
+  'CUP',
+  'BUNGKUS',
+  'LUSIN',
+  'PALLET',
+  'KOLI',
+] as const;
+
 const create_commodity_schema = z
   .object({
     supplier_role_id: z.string().uuid({
@@ -60,8 +95,8 @@ const create_commodity_schema = z
     name: z
       .string({ message: 'name wajib diisi' })
       .min(2, { message: 'name minimal 2 karakter' }),
-    wholesale_unit: z.enum(['KARUNG', 'SAK', 'KRAT', 'PAX', 'BAL'], {
-      message: 'wholesale_unit harus salah satu dari: KARUNG, SAK, KRAT, PAX, BAL',
+    wholesale_unit: z.enum(ALL_WHOLESALE_UNITS, {
+      message: 'wholesale_unit tidak valid',
     }),
     base_price: z.union([z.number(), z.string()], {
       message: 'base_price wajib diisi',
@@ -161,8 +196,8 @@ const update_commodity_schema = z
   .object({
     name: z.string().min(2, { message: 'name minimal 2 karakter' }).optional(),
     wholesale_unit: z
-      .enum(['KARUNG', 'SAK', 'KRAT', 'PAX', 'BAL'], {
-        message: 'wholesale_unit harus salah satu dari: KARUNG, SAK, KRAT, PAX, BAL',
+      .enum(ALL_WHOLESALE_UNITS, {
+        message: 'wholesale_unit tidak valid',
       })
       .optional(),
     base_price: z.union([z.number(), z.string()]).optional(),
@@ -259,8 +294,14 @@ export const create_supplier_commodity_validation = (
   next: NextFunction
 ): void => {
   try {
+    if (req.body.production_date === '') {
+      req.body.production_date = null;
+    }
     if (!req.body.production_date && (req.body.estimated_harvest_date || req.body.estimated_harvest_day)) {
       req.body.production_date = req.body.estimated_harvest_date ?? req.body.estimated_harvest_day;
+    }
+    if (req.body.under_moq_price_per_kg === '') {
+      req.body.under_moq_price_per_kg = null;
     }
     req.body = create_commodity_schema.parse(req.body);
     next();
@@ -276,8 +317,14 @@ export const update_supplier_commodity_validation = (
 ): void => {
   try {
     req.params = commodity_id_param_schema.parse(req.params) as { id: string };
+    if (req.body.production_date === '') {
+      req.body.production_date = null;
+    }
     if (!req.body.production_date && (req.body.estimated_harvest_date || req.body.estimated_harvest_day)) {
       req.body.production_date = req.body.estimated_harvest_date ?? req.body.estimated_harvest_day;
+    }
+    if (req.body.under_moq_price_per_kg === '') {
+      req.body.under_moq_price_per_kg = null;
     }
     req.body = update_commodity_schema.parse(req.body);
     next();

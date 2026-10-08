@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "devDependencies": {
+    "@types/multer": "^2.3.0"
   },
   "scripts": {
     "dev": "bun --watch index.ts",
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.26.0",
+    "@supabase/supabase-js": "^2.117.3",
     "@types/bun": "^1.4.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
@@ -33,6 +35,7 @@
     "jsonwebtoken": "^9.0.3",
     "lru-cache": "^11.5.3",
     "midtrans-client": "^1.4.3",
+    "multer": "^2.4.0",
     "postgres": "^3.4.9",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1",

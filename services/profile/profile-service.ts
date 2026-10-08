@@ -12,6 +12,14 @@ import {
   delete_business_entity,
   find_entities_list,
   count_entities,
+  get_total_sales_by_entity_id,
+  get_products_by_entity_id,
+  find_role_by_id,
+  find_all_active_roles,
+  delete_business_role_by_id,
+  update_business_role_by_id,
+  check_role_has_active_transactions,
+  check_entity_has_active_transactions,
 } from '../../repositories/profile/profile-repositories.ts';
 import type {
   CreateProfileDTO,
@@ -23,16 +31,21 @@ import type {
   PaginatedProfileResult,
   BusinessEntityRecord,
   BusinessRoleRecord,
+  ProductDTO,
+  RoleType,
+  SectorType,
 } from '../../types/profile-types.ts';
 
 /**
  * Helper untuk memetakan entity record dan roles ke ProfileResponseDTO.
  * Menyediakan alias sesuai permintaan user:
- * profile, bank_account_info, lat, long, default_address, npwp, business_name, storage, sector.
+ * profile, bank_account_info, lat, long, default_address, npwp, business_name, storage, sector, phone_number.
  */
 const format_profile_response = (
   entity: BusinessEntityRecord,
-  roles: BusinessRoleRecord[]
+  roles: BusinessRoleRecord[],
+  total_sales?: number,
+  products?: ProductDTO[]
 ): ProfileResponseDTO => {
   const primary_role = roles[0] ?? null;
 
@@ -59,6 +72,7 @@ const format_profile_response = (
     npwp: entity.npwp_nib,
     npwp_nib: entity.npwp_nib,
     default_address: entity.default_address,
+    phone_number: ('phone_number' in entity && entity.phone_number !== null) ? entity.phone_number : undefined,
     lat: isNaN(parsed_lat) ? 0 : parsed_lat,
     long: isNaN(parsed_long) ? 0 : parsed_long,
     latitude: isNaN(parsed_lat) ? 0 : parsed_lat,
@@ -76,6 +90,8 @@ const format_profile_response = (
     roles: mapped_roles,
     created_at: entity.created_at,
     updated_at: entity.updated_at,
+    total_sales: total_sales ?? undefined,
+    products: products ?? undefined,
   };
 };
 
@@ -144,6 +160,7 @@ export const create_profile_service = async (
     default_address: clean_address,
     latitude: String(lat_num),
     longitude: String(long_num),
+    phone_number: payload.phone_number ?? null,
     bank_account_info: payload.bank_account_info ?? {},
     profile_picture_url: payload.profile_picture_url ?? null,
   };
@@ -177,7 +194,10 @@ export const get_profile_by_id_service = async (
   }
 
   const roles = await find_roles_by_entity_id(found_entity.id);
-  return format_profile_response(found_entity, roles);
+  const total_sales = await get_total_sales_by_entity_id(found_entity.id);
+  const products = await get_products_by_entity_id(found_entity.id);
+
+  return format_profile_response(found_entity, roles, total_sales, products);
 };
 
 /**
@@ -221,6 +241,9 @@ export const update_profile_service = async (
   if (payload.default_address !== undefined) {
     entity_update_payload.default_address = payload.default_address.trim();
   }
+  if (payload.phone_number !== undefined) {
+    entity_update_payload.phone_number = payload.phone_number;
+  }
 
   if (payload.latitude !== undefined || payload.longitude !== undefined) {
     const lat_target = payload.latitude !== undefined ? payload.latitude : target_entity.latitude;
@@ -262,7 +285,12 @@ export const update_profile_service = async (
   }
 
   const refreshed_roles = await find_roles_by_entity_id(entity_id);
-  return format_profile_response(updated_entity, refreshed_roles);
+  // Recalculate total_sales and products after update (optional, could be expensive)
+  // For now we keep previous values? We'll fetch fresh to reflect any changes.
+  const total_sales = await get_total_sales_by_entity_id(entity_id);
+  const products = await get_products_by_entity_id(entity_id);
+
+  return format_profile_response(updated_entity, refreshed_roles, total_sales, products);
 };
 
 /**
@@ -287,6 +315,16 @@ export const delete_profile_service = async (
       'Profil entitas bisnis tidak ditemukan',
       404,
       'PROFILE_NOT_FOUND'
+    );
+  }
+
+  // Periksa apakah entitas masih memiliki pesanan, transaksi, atau pool aktif
+  const tx_check = await check_entity_has_active_transactions(entity_id);
+  if (tx_check.has_active) {
+    throw new AppError(
+      `Akun profil usaha tidak dapat dihapus karena ${tx_check.reason}`,
+      400,
+      'ACTIVE_TRANSACTIONS_EXIST'
     );
   }
 
@@ -317,6 +355,117 @@ export const delete_profile_service = async (
 };
 
 /**
+ * Menambahkan peran usaha baru (SUPPLIER atau UMKM) untuk suatu entitas bisnis.
+ */
+export const create_role_service = async (payload: {
+  entity_id: string;
+  role_type: RoleType;
+  sector_type?: SectorType | null;
+  storage_capacity?: number;
+  is_active?: boolean;
+}): Promise<BusinessRoleRecord> => {
+  const target_entity = await find_entity_by_id(payload.entity_id);
+  if (!target_entity) {
+    throw new AppError('Entitas bisnis tidak ditemukan', 404, 'ENTITY_NOT_FOUND');
+  }
+
+  const existing_roles = await find_roles_by_entity_id(payload.entity_id);
+  const already_exists = existing_roles.some(
+    (r) => r.role_type === payload.role_type
+  );
+  if (already_exists) {
+    throw new AppError(
+      `Peran usaha ${payload.role_type} sudah terdaftar pada entitas ini`,
+      400,
+      'ROLE_ALREADY_EXISTS'
+    );
+  }
+
+  const new_role = await insert_business_role({
+    entity_id: payload.entity_id,
+    role_type: payload.role_type,
+    sector_type: payload.sector_type ?? null,
+    storage_capacity: payload.storage_capacity ?? 0,
+    is_active: payload.is_active ?? true,
+  });
+
+  return new_role;
+};
+
+/**
+ * Memperbarui konfigurasi suatu peran usaha berdasarkan role_id.
+ */
+export const update_role_service = async (
+  role_id: string,
+  payload: {
+    sector_type?: SectorType | null;
+    storage_capacity?: number;
+    is_active?: boolean;
+    role_type?: RoleType;
+  }
+): Promise<BusinessRoleRecord> => {
+  const target_role = await find_role_by_id(role_id);
+  if (!target_role) {
+    throw new AppError('Peran usaha tidak ditemukan', 404, 'ROLE_NOT_FOUND');
+  }
+
+  const updated = await update_business_role_by_id(role_id, payload);
+  if (!updated) {
+    throw new AppError('Gagal memperbarui peran usaha', 500, 'UPDATE_ROLE_FAILED');
+  }
+
+  return updated;
+};
+
+/**
+ * Menghapus suatu peran usaha berdasarkan role_id dengan validasi transaksi aktif.
+ */
+export const delete_role_service = async (role_id: string): Promise<void> => {
+  const target_role = await find_role_by_id(role_id);
+  if (!target_role) {
+    throw new AppError('Peran usaha tidak ditemukan', 404, 'ROLE_NOT_FOUND');
+  }
+
+  const existing_roles = await find_roles_by_entity_id(target_role.entity_id);
+  if (existing_roles.length <= 1) {
+    throw new AppError(
+      'Entitas usaha harus memiliki minimal 1 peran aktif. Untuk menghapus peran ini, silakan gunakan tombol hapus akun usaha.',
+      400,
+      'CANNOT_DELETE_LAST_ROLE'
+    );
+  }
+
+  const tx_check = await check_role_has_active_transactions(role_id);
+  if (tx_check.has_active) {
+    throw new AppError(
+      `Peran usaha tidak dapat dihapus karena ${tx_check.reason}`,
+      400,
+      'ACTIVE_TRANSACTIONS_EXIST'
+    );
+  }
+
+  try {
+    const is_deleted = await delete_business_role_by_id(role_id);
+    if (!is_deleted) {
+      throw new AppError('Gagal menghapus peran usaha dari database', 500, 'DELETE_FAILED');
+    }
+  } catch (delete_error) {
+    if (
+      delete_error instanceof Error &&
+      (delete_error.message.includes('foreign key') ||
+        delete_error.message.includes('violates foreign key'))
+    ) {
+      throw new AppError(
+        'Peran usaha tidak dapat dihapus karena masih terkait dengan data produk, komoditas, atau pesanan',
+        400,
+        'ROLE_IN_USE'
+      );
+    }
+    throw delete_error;
+  }
+};
+
+/**
  * Mengambil daftar profil dengan paginasi dan pencarian (GET /).
  */
 export const list_profiles_service = async (
@@ -330,11 +479,18 @@ export const list_profiles_service = async (
     count_entities(filter.search),
   ]);
 
-  const formatted_profiles = await Promise.all(
+  // Fetch extra data for each entity in parallel
+  const entitiesWithExtra = await Promise.all(
     entities.map(async (entity_record) => {
       const roles = await find_roles_by_entity_id(entity_record.id);
-      return format_profile_response(entity_record, roles);
+      const total_sales = await get_total_sales_by_entity_id(entity_record.id);
+      const products = await get_products_by_entity_id(entity_record.id);
+      return { entity: entity_record, roles, total_sales, products };
     })
+  );
+
+  const formatted_profiles = entitiesWithExtra.map(({ entity, roles, total_sales, products }) =>
+    format_profile_response(entity, roles, total_sales, products)
   );
 
   return {
@@ -343,4 +499,27 @@ export const list_profiles_service = async (
     offset: offset_num,
     profiles: formatted_profiles,
   };
+};
+
+/**
+ * Mengambil daftar peran usaha berdasarkan filter entity_id dan/atau role_type
+ */
+export const list_roles_service = async (filter: {
+  entity_id?: string;
+  role_type?: string;
+}): Promise<BusinessRoleRecord[]> => {
+  let roles: BusinessRoleRecord[] = [];
+  if (filter.entity_id) {
+    roles = await find_roles_by_entity_id(filter.entity_id);
+  } else {
+    roles = await find_all_active_roles(filter.role_type as RoleType | undefined);
+  }
+
+  if (filter.role_type) {
+    roles = roles.filter(
+      (r) => r.role_type.toUpperCase() === filter.role_type!.toUpperCase()
+    );
+  }
+
+  return roles;
 };

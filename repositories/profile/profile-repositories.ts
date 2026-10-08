@@ -1,6 +1,17 @@
-import { eq, or, ilike, sql, desc, asc } from 'drizzle-orm';
+import { eq, or, and, ilike, inArray, sql, desc, asc } from 'drizzle-orm';
 import { db } from '../../config/db.ts';
-import { business_entities, business_roles } from '../../config/schema.ts';
+import {
+  business_entities,
+  business_roles,
+  umkm_procurement_orders,
+  consolidated_pos,
+  supplier_commodities,
+  umkm_products,
+  procurement_pools,
+  pool_participants,
+  waste_listings,
+  waste_transactions,
+} from '../../config/schema.ts';
 import type {
   BusinessEntityRecord,
   NewBusinessEntity,
@@ -9,6 +20,7 @@ import type {
   RoleType,
   SectorType,
 } from '../../types/profile-types.ts';
+import type { ProductDTO } from '../../types/profile-types.ts';
 
 export const find_entity_by_id = async (
   entity_id: string
@@ -92,6 +104,23 @@ export const find_active_role_by_entity_and_type = async (
   );
 
   return matched ?? records[0] ?? null;
+};
+
+export const find_all_active_roles = async (
+  role_type?: RoleType
+): Promise<BusinessRoleRecord[]> => {
+  if (role_type) {
+    return await db
+      .select()
+      .from(business_roles)
+      .where(and(eq(business_roles.is_active, true), eq(business_roles.role_type, role_type)))
+      .limit(100);
+  }
+  return await db
+    .select()
+    .from(business_roles)
+    .where(eq(business_roles.is_active, true))
+    .limit(100);
 };
 
 export const insert_business_entity = async (
@@ -279,4 +308,213 @@ export const count_entities = async (
     .from(business_entities);
 
   return Number(result[0]?.count ?? 0);
+};
+
+/**
+ * Get total sales amount for an entity.
+ * Definition: sum of grand_total from umkm_procurement_orders where the supplier role belongs to the entity.
+ */
+export const get_total_sales_by_entity_id = async (
+  entity_id: string
+): Promise<number> => {
+  // Join: business_entities -> business_roles -> consolidated_pos (as supplier) -> umkm_procurement_orders
+  // We'll sum grand_total of umkm_procurement_orders where the supplier_role_id matches a role of the entity.
+  const result = await db
+    .select({ total: sql<number>`COALESCE(SUM(${umkm_procurement_orders.grand_total}), 0)` })
+    .from(umkm_procurement_orders)
+    .innerJoin(
+      consolidated_pos,
+      eq(umkm_procurement_orders.participant_id, consolidated_pos.id)
+    )
+    .innerJoin(
+      business_roles,
+      eq(consolidated_pos.supplier_role_id, business_roles.id)
+    )
+    .where(eq(business_roles.entity_id, entity_id));
+
+  return Number(result[0]?.total ?? 0);
+};
+
+/**
+ * Get list of products/commodities associated with an entity.
+ * If entity has SUPPLIER role -> return supplier_commodities.
+ * If entity has UMKM role -> return umkm_products.
+ * If both, return combined list (supplier first).
+ * Each item mapped to ProductDTO shape.
+ */
+export const get_products_by_entity_id = async (
+  entity_id: string
+): Promise<ProductDTO[]> => {
+  // Fetch roles for the entity
+  const roles = await find_roles_by_entity_id(entity_id);
+  const hasSupplierRole = roles.some(r => r.role_type === 'SUPPLIER');
+  const hasUmkmRole = roles.some(r => r.role_type === 'UMKM');
+
+  const products: ProductDTO[] = [];
+
+  if (hasSupplierRole) {
+    const supplierComm = await db
+      .select({
+        id: supplier_commodities.id,
+        name: supplier_commodities.name,
+        sku: supplier_commodities.sku,
+        base_price: supplier_commodities.base_price,
+        stock: supplier_commodities.stock,
+        unit: supplier_commodities.wholesale_unit,
+      })
+      .from(supplier_commodities)
+      .innerJoin(
+        business_roles,
+        eq(supplier_commodities.supplier_role_id, business_roles.id)
+      )
+      .where(eq(business_roles.entity_id, entity_id));
+
+    for (const sc of supplierComm) {
+      products.push({
+        id: sc.id,
+        name: sc.name,
+        sku: sc.sku,
+        base_price: Number(sc.base_price),
+        stock: Number(sc.stock),
+        unit: sc.unit,
+      });
+    }
+  }
+
+  if (hasUmkmRole) {
+    const umkmProd = await db
+      .select({
+        id: umkm_products.id,
+        name: umkm_products.product_name,
+        sku: umkm_products.id, // fallback: use id as sku? maybe we don't have sku; we can leave empty string or use id.
+        base_price: umkm_products.target_selling_price_per_unit,
+        stock: umkm_products.expected_batch_units, // not exactly stock; we'll use expected_batch_units as placeholder
+        unit: umkm_products.unit,
+      })
+      .from(umkm_products)
+      .innerJoin(
+        business_roles,
+        eq(umkm_products.umkm_role_id, business_roles.id)
+      )
+      .where(eq(business_roles.entity_id, entity_id));
+
+    for (const up of umkmProd) {
+      products.push({
+        id: up.id,
+        name: up.name,
+        sku: up.sku ?? '',
+        base_price: Number(up.base_price),
+        stock: Number(up.stock),
+        unit: up.unit,
+      });
+    }
+  }
+
+  return products;
+};
+
+export const find_role_by_id = async (
+  role_id: string
+): Promise<BusinessRoleRecord | null> => {
+  const records = await db
+    .select()
+    .from(business_roles)
+    .where(eq(business_roles.id, role_id))
+    .limit(1);
+
+  return records[0] ?? null;
+};
+
+export const delete_business_role_by_id = async (
+  role_id: string
+): Promise<boolean> => {
+  const deleted = await db
+    .delete(business_roles)
+    .where(eq(business_roles.id, role_id))
+    .returning();
+
+  return deleted.length > 0;
+};
+
+export const check_role_has_active_transactions = async (
+  role_id: string
+): Promise<{ has_active: boolean; reason?: string }> => {
+  // 1. Cek apakah UMKM masih terdaftar dalam pool aktif
+  const active_participant = await db
+    .select({ id: pool_participants.id })
+    .from(pool_participants)
+    .innerJoin(procurement_pools, eq(pool_participants.pool_id, procurement_pools.id))
+    .where(
+      and(
+        eq(pool_participants.umkm_role_id, role_id),
+        inArray(procurement_pools.pool_status, ['OPEN', 'AGGREGATING', 'LOCKED'])
+      )
+    )
+    .limit(1);
+
+  if (active_participant.length > 0) {
+    return {
+      has_active: true,
+      reason: 'Masih terdaftar sebagai peserta dalam sesi pooling yang sedang berjalan',
+    };
+  }
+
+  // 2. Cek apakah Supplier memiliki PO terkonsolidasi yang belum delivered
+  const active_po = await db
+    .select({ id: consolidated_pos.id })
+    .from(consolidated_pos)
+    .where(
+      and(
+        eq(consolidated_pos.supplier_role_id, role_id),
+        inArray(consolidated_pos.po_status, ['ISSUED', 'PAID_TO_ESCROW', 'SHIPPED'])
+      )
+    )
+    .limit(1);
+
+  if (active_po.length > 0) {
+    return {
+      has_active: true,
+      reason: 'Masih memiliki pesanan pasokan grosir (PO) yang sedang diproses atau dikirim',
+    };
+  }
+
+  // 3. Cek apakah ada transaksi limbah yang tertahan di escrow
+  const active_waste_tx = await db
+    .select({ id: waste_transactions.id })
+    .from(waste_transactions)
+    .where(
+      and(
+        or(
+          eq(waste_transactions.buyer_role_id, role_id),
+          sql`${waste_transactions.listing_id} IN (SELECT id FROM ${waste_listings} WHERE seller_role_id = ${role_id})`
+        ),
+        eq(waste_transactions.fulfillment_status, 'PAID_HELD_IN_ESCROW')
+      )
+    )
+    .limit(1);
+
+  if (active_waste_tx.length > 0) {
+    return {
+      has_active: true,
+      reason: 'Masih memiliki transaksi limbah aktif dengan dana tertahan di escrow',
+    };
+  }
+
+  return { has_active: false };
+};
+
+export const check_entity_has_active_transactions = async (
+  entity_id: string
+): Promise<{ has_active: boolean; reason?: string }> => {
+  const roles = await find_roles_by_entity_id(entity_id);
+  if (roles.length === 0) return { has_active: false };
+
+  for (const role of roles) {
+    const role_check = await check_role_has_active_transactions(role.id);
+    if (role_check.has_active) {
+      return role_check;
+    }
+  }
+
+  return { has_active: false };
 };

@@ -28,14 +28,37 @@ export const find_business_role_by_id = async (
 
 export const find_commodity_by_id = async (
   commodity_id: string
-): Promise<SupplierCommodityRecord | null> => {
+): Promise<(SupplierCommodityRecord & { supplier_entity_id?: string }) | null> => {
   const records = await db
-    .select()
+    .select({
+      id: supplier_commodities.id,
+      supplier_role_id: supplier_commodities.supplier_role_id,
+      supplier_entity_id: business_roles.entity_id,
+      name: supplier_commodities.name,
+      sku: supplier_commodities.sku,
+      wholesale_unit: supplier_commodities.wholesale_unit,
+      base_price: supplier_commodities.base_price,
+      stock: supplier_commodities.stock,
+      base_moq: supplier_commodities.base_moq,
+      lead_time_days: supplier_commodities.lead_time_days,
+      image_url: supplier_commodities.image_url,
+      description: supplier_commodities.description,
+      production_date: supplier_commodities.production_date,
+      closed_date: supplier_commodities.closed_date,
+      reserved_stock: supplier_commodities.reserved_stock,
+      auto_activate_marketplace: supplier_commodities.auto_activate_marketplace,
+      allows_under_moq: supplier_commodities.allows_under_moq,
+      under_moq_price_per_kg: supplier_commodities.under_moq_price_per_kg,
+      is_marketplace_active: supplier_commodities.is_marketplace_active,
+      created_at: supplier_commodities.created_at,
+      updated_at: supplier_commodities.updated_at,
+    })
     .from(supplier_commodities)
+    .leftJoin(business_roles, eq(supplier_commodities.supplier_role_id, business_roles.id))
     .where(eq(supplier_commodities.id, commodity_id))
     .limit(1);
 
-  return records[0] ?? null;
+  return (records[0] as any) ?? null;
 };
 
 export const find_commodity_by_sku = async (
@@ -272,6 +295,7 @@ export const find_commodities_by_entity_id = async (
     .select({
       id: supplier_commodities.id,
       supplier_role_id: supplier_commodities.supplier_role_id,
+      supplier_entity_id: business_roles.entity_id,
       sku: supplier_commodities.sku,
       name: supplier_commodities.name,
       wholesale_unit: supplier_commodities.wholesale_unit,
