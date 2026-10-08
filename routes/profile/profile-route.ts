@@ -6,6 +6,10 @@ import {
   patch_profile,
   delete_profile,
   list_profiles,
+  create_business_role,
+  update_business_role,
+  delete_business_role,
+  list_business_roles,
 } from '../../controllers/profile/profile-controller.ts';
 import {
   create_profile_validation,
@@ -13,6 +17,9 @@ import {
   patch_profile_validation,
   get_profile_by_id_validation,
   list_profiles_validation,
+  create_business_role_validation,
+  update_business_role_validation,
+  delete_business_role_validation,
 } from '../../validations/profile/profile-validation.ts';
 
 const router = Router();
@@ -328,5 +335,17 @@ router.patch(
  *         description: Profil tidak ditemukan
  */
 router.delete('/:id', get_profile_by_id_validation, delete_profile);
+
+/**
+ * Endpoint manajemen Peran Usaha (Roles)
+ */
+router.get('/roles', list_business_roles);
+router.post('/roles', create_business_role_validation, create_business_role);
+router.put('/roles/:role_id', update_business_role_validation, update_business_role);
+router.delete('/roles/:role_id', delete_business_role_validation, delete_business_role);
+
+// Alias rute jika parameter id digunakan
+router.put('/roles/:id', update_business_role_validation, update_business_role);
+router.delete('/roles/:id', delete_business_role_validation, delete_business_role);
 
 export default router;

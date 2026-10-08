@@ -14,9 +14,11 @@ import pre_order_router from './routes/orders/pre-order-route.ts';
 import procurement_order_router from './routes/orders/procurement-order-route.ts';
 import payment_router from './routes/payments/payment-route.ts';
 import profile_router from './routes/profile/profile-route.ts';
+import business_router from './routes/profile/business-route.ts';
 import marketplace_router from './routes/products/marketplace-route.ts';
 import waste_router from './routes/waste/waste-route.ts';
 import dashboard_router from './routes/dashboard/dashboard-route.ts';
+import storage_router from './routes/storage/storage-route.ts';
 
 const DEFAULT_PORT = 3000;
 const server_port = process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;
@@ -67,6 +69,7 @@ app.get('/', (_req: Request, res: Response) => {
 app.use('/api/auth', auth_router);
 app.use('/api/profile', profile_router);
 app.use('/api/profiles', profile_router);
+app.use('/api/business', business_router);
 app.use('/api/supplier-catalogs', supplier_catalog_router);
 app.use('/api/commodity-batch-tags', commodity_batch_tag_router);
 app.use('/api/products', product_router);
@@ -77,6 +80,7 @@ app.use('/api/payments', payment_router);
 app.use('/api/marketplace', marketplace_router);
 app.use('/api/waste-listings', waste_router);
 app.use('/api/dashboards', dashboard_router);
+app.use('/api/upload', storage_router);
 
 // Middleware penanganan error global terpusat
 app.use(error_middleware);

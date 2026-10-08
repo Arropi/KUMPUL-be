@@ -16,10 +16,13 @@ import {
   get_supplier_commodity_by_id_validation,
 } from '../../validations/products/supplier-catalog-validation.ts';
 import commodity_batch from "./commodity-batch-tag-route.ts"
+import storage_router from '../storage/storage-route.ts';
 
 const router = Router();
 
 router.use("/batch", commodity_batch);
+router.use("/upload", storage_router);
+router.use("/upload-image", storage_router);
 
 /**
  * @swagger

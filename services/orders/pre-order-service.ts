@@ -8,6 +8,7 @@ import {
   insert_procurement_pool,
   update_procurement_pool,
   insert_pool_participant,
+  update_pool_participant,
   insert_consolidated_po,
   find_pools_past_cutoff_or_expired,
 } from '../../repositories/orders/procurement-pool-repositories.ts';
@@ -23,6 +24,146 @@ import type {
   PoolStatus,
   DeliveryMethod,
 } from '../../types/procurement-order-types.ts';
+
+/**
+ * Menghitung dan mengupdate biaya ongkir untuk peserta Hemat Hub dalam pool
+ * berdasarkan aturan pembagian biaya yang dinamis
+ */
+export const calculate_hemat_hub_shipping_costs = async (
+  poolId: string
+): Promise<void> => {
+  // Ambil informasi pool untuk mendapatkan host UMkm
+  const pool = await find_pool_by_id(poolId);
+  if (!pool) {
+    throw new AppError('Procurement pool tidak ditemukan', 404, 'POOL_NOT_FOUND');
+  }
+
+  // Ambil semua peserta pool
+  const participants = await find_participants_by_pool_id(poolId);
+
+  // Filter peserta yang memilih metode HEMAT_HUB
+  const hematHubParticipants = participants.filter(
+    p => p.delivery_method === 'HEMAT_HUB'
+  );
+
+  const hematHubCount = hematHubParticipants.length;
+
+  // Jika tidak ada peserta Hemat Hub, tidak perlu menghitung
+  if (hematHubCount === 0) {
+    return;
+  }
+
+  // Biaya dasar ongkir Hemat Hub (dari konfigurasi yang ada)
+  const HEMAT_HUB_BASE_COST = 15000;
+  const DIRECT_DOOR_BASE_COST = 35000;
+
+  // Jika hanya ada 1 peserta yang memilih Hemat Hub, ubah ke Direct Door
+  if (hematHubCount === 1) {
+    const participant = hematHubParticipants[0];
+    if (participant) {
+      await update_pool_participant(participant.id, {
+        allocated_shipping_fee: String(DIRECT_DOOR_BASE_COST),
+        delivery_method: 'DIRECT_DOOR_TO_DOOR' as DeliveryMethod
+      });
+    }
+    return;
+  }
+
+  // Identifikasi host berdasarkan host_umkm_role_id dari pool
+  let hostParticipant: PoolParticipantRecord | null = null;
+  let regularParticipants: PoolParticipantRecord[] = [];
+
+  if (pool.host_umkm_role_id) {
+    // Cari peserta yang merupakan host berdasarkan role ID
+    hostParticipant = hematHubParticipants.find(
+      p => p.umkm_role_id === pool.host_umkm_role_id
+    ) ?? null;
+  }
+
+  // Jika tidak ditemukan host yang valid, gunakan peserta pertama sebagai fallback
+  if (!hostParticipant && hematHubParticipants.length > 0) {
+    hostParticipant = hematHubParticipants[0] ?? null;
+  }
+
+  // Peserta biasa adalah semua hemat hub participant selain host
+  if (hostParticipant) {
+    regularParticipants = hematHubParticipants.filter(
+      p => p.id !== hostParticipant!.id
+    );
+  } else {
+    // Jika tidak ada host yang teridentifikasi, semua dianggap biasa
+    regularParticipants = [...hematHubParticipants];
+    hostParticipant = null;
+  }
+
+  switch (hematHubCount) {
+    case 2: {
+      // Biaya dibagi 2 sama rata
+      const sharePerPerson = Math.floor(HEMAT_HUB_BASE_COST / 2);
+
+      // Update biaya untuk semua peserta Hemat Hub
+      for (const participant of hematHubParticipants) {
+        await update_pool_participant(participant.id, {
+          allocated_shipping_fee: String(sharePerPerson)
+        });
+      }
+      break;
+    }
+
+    case 3: {
+      // Biaya dibagi 3, host hanya membayar 20% dari bagian mereka
+      const normalShare = Math.floor(HEMAT_HUB_BASE_COST / 3);
+      const hostShare = Math.floor(normalShare * 0.2); // 20% dari bagian normal host
+      const remainingForOthers = HEMAT_HUB_BASE_COST - hostShare;
+      const otherShare = Math.floor(remainingForOthers / 2); // Sisa dibagi 2 untuk yang lain
+
+      // Update biaya untuk host
+      if (hostParticipant) {
+        await update_pool_participant(hostParticipant.id, {
+          allocated_shipping_fee: String(hostShare)
+        });
+      }
+
+      // Update biaya untuk peserta biasa
+      for (const participant of regularParticipants) {
+        await update_pool_participant(participant.id, {
+          allocated_shipping_fee: String(otherShare)
+        });
+      }
+      break;
+    }
+
+    default: {
+      // Lebih dari 3 peserta: host gratis, yang lain membagi biaya
+      if (hematHubCount > 3 && regularParticipants.length > 0) {
+        const sharePerPerson = Math.floor(HEMAT_HUB_BASE_COST / regularParticipants.length);
+
+        // Host gratis
+        if (hostParticipant) {
+          await update_pool_participant(hostParticipant.id, {
+            allocated_shipping_fee: '0'
+          });
+        }
+
+        // Yang lain membagi biaya
+        for (const participant of regularParticipants) {
+          await update_pool_participant(participant.id, {
+            allocated_shipping_fee: String(sharePerPerson)
+          });
+        }
+      } else {
+        // Fallback: bagi sama rata jika tidak ada host yang jelas atau hanya 2 peserta
+        const sharePerPerson = Math.floor(HEMAT_HUB_BASE_COST / hematHubCount);
+        for (const participant of hematHubParticipants) {
+          await update_pool_participant(participant.id, {
+            allocated_shipping_fee: String(sharePerPerson)
+          });
+        }
+      }
+      break;
+    }
+  }
+};
 
 export const evaluate_pool_cutoffs_service = async (): Promise<{ updated_count: number }> => {
   const expired_pools = await find_pools_past_cutoff_or_expired();
@@ -328,10 +469,15 @@ export const join_procurement_pool_service = async (
         reserved_stock: String(reserved_stock + new_accumulated),
       });
     }
+
+    // Hitung dan update biaya ongkir Hemat Hub berdasarkan aturan baru
+    await calculate_hemat_hub_shipping_costs(pool.id);
   }
 
   // 9. Buat otomatis pesanan pengadaan UMKM (UMKM Procurement Order)
   const subtotal = order_qty_num * best_unit_price;
+  // Gunakan allocated_shipping yang sudah dihitung berdasarkan delivery_method awal
+  // Nota: Ini mungkin akan di-override oleh calculate_hemat_hub_shipping_costs jika pool menjadi LOCKED
   const grand_total = subtotal + allocated_shipping;
 
   const created_order = await insert_procurement_order({

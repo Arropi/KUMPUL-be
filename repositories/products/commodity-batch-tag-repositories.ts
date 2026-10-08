@@ -104,3 +104,11 @@ export const delete_commodity_batch_tag_by_id = async (
 
   return deleted_records[0] ?? null;
 };
+
+export const delete_batch_tags_by_commodity_id = async (
+  commodity_id: string
+): Promise<void> => {
+  await db
+    .delete(commodity_batch_tags)
+    .where(eq(commodity_batch_tags.commodity_id, commodity_id));
+};

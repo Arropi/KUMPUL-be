@@ -5,7 +5,39 @@ import type {
   NewCommodityPriceTier,
 } from './database-types.ts';
 
-export type WholesaleUnit = 'KARUNG' | 'SAK' | 'KRAT' | 'PAX' | 'BAL';
+export type WholesaleUnit =
+  | 'KARUNG'
+  | 'SAK'
+  | 'KRAT'
+  | 'PAX'
+  | 'BAL'
+  | 'KG'
+  | 'GRAM'
+  | 'TON'
+  | 'KUINTAL'
+  | 'LITER'
+  | 'ML'
+  | 'KUBIK'
+  | 'PCS'
+  | 'PACK'
+  | 'DUS'
+  | 'BOX'
+  | 'KARTON'
+  | 'BOTOL'
+  | 'KALENG'
+  | 'TRAY'
+  | 'KERANJANG'
+  | 'BASKOM'
+  | 'EKOR'
+  | 'BUTIR'
+  | 'LEMBAR'
+  | 'IKAT'
+  | 'PORSI'
+  | 'CUP'
+  | 'BUNGKUS'
+  | 'LUSIN'
+  | 'PALLET'
+  | 'KOLI';
 
 export interface PriceTierInputDTO {
   min_qty: number | string;
@@ -54,6 +86,9 @@ export interface UpdateSupplierCommodityDTO {
 
 export interface SupplierCommodityWithTiers extends SupplierCommodity {
   price_tiers: CommodityPriceTier[];
+  supplier_entity_id?: string;
+  batch_tag?: any;
+  batch_tags?: any[];
 }
 
 export type SupplierCommodityRecord = SupplierCommodity;

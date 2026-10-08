@@ -19,12 +19,23 @@ export interface BankAccountInfo {
   [key: string]: unknown;
 }
 
+/** Minimal product information for profile listing */
+export interface ProductDTO {
+  id: string;
+  name: string;
+  sku: string;
+  base_price: number | string;
+  stock: number | string;
+  unit: string;
+}
+
 export interface CreateProfileDTO {
   business_name: string;
   npwp: string;
   default_address: string;
   latitude: number | string;
   longitude: number | string;
+  phone_number?: string;
   bank_account_info?: BankAccountInfo;
   profile_picture_url?: string | null;
   storage_capacity?: number;
@@ -39,6 +50,7 @@ export interface UpdateProfileDTO {
   default_address?: string;
   latitude?: number | string;
   longitude?: number | string;
+  phone_number?: string;
   bank_account_info?: BankAccountInfo;
   profile_picture_url?: string | null;
   storage_capacity?: number;
@@ -69,6 +81,7 @@ export interface ProfileResponseDTO {
   npwp: string;
   npwp_nib: string;
   default_address: string;
+  phone_number?: string;
   lat: number;
   long: number;
   latitude: number;
@@ -86,6 +99,10 @@ export interface ProfileResponseDTO {
   roles: ProfileRoleItem[];
   created_at: Date | null;
   updated_at: Date | null;
+  /** Total sales amount (sum of transaction amounts) */
+  total_sales?: number;
+  /** List of products/commodities associated with this entity */
+  products?: ProductDTO[];
 }
 
 export interface ProfileListFilterDTO {

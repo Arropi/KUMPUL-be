@@ -187,6 +187,7 @@ export const business_entities = pgTable('business_entities', {
   default_address: text('default_address').notNull(),
   latitude: numeric('latitude').notNull(),
   longitude: numeric('longitude').notNull(),
+  phone_number: varchar('phone_number', { length: 20 }),
   bank_account_info: jsonb('bank_account_info').default({}),
   profile_picture_url: text('profile_picture_url'),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),

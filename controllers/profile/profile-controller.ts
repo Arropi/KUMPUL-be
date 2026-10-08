@@ -6,6 +6,10 @@ import {
   patch_profile_service,
   delete_profile_service,
   list_profiles_service,
+  create_role_service,
+  update_role_service,
+  delete_role_service,
+  list_roles_service,
 } from '../../services/profile/profile-service.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
 
@@ -24,6 +28,7 @@ export const create_profile = async (
       default_address: req.body.default_address,
       latitude: req.body.latitude,
       longitude: req.body.longitude,
+      phone_number: req.body.phone_number,
       bank_account_info: req.body.bank_account_info,
       profile_picture_url: req.body.profile_picture_url,
       storage_capacity: req.body.storage_capacity,
@@ -183,3 +188,98 @@ export const list_profiles = async (
     next(controller_error);
   }
 };
+
+/**
+ * Controller untuk menambahkan peran usaha baru (POST /api/profile/roles atau /api/business/roles)
+ */
+export const create_business_role = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const entity_id = req.body.entity_id || resolve_entity_id(req);
+    const new_role = await create_role_service({
+      entity_id,
+      role_type: req.body.role_type,
+      sector_type: req.body.sector_type,
+      storage_capacity: req.body.storage_capacity,
+      is_active: req.body.is_active,
+    });
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Peran usaha berhasil ditambahkan',
+      data: new_role,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+/**
+ * Controller untuk memperbarui peran usaha (PUT /api/profile/roles/:role_id atau /api/business/roles/:role_id)
+ */
+export const update_business_role = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const role_id = (req.params.role_id || req.params.id) as string;
+    const updated_role = await update_role_service(role_id, req.body);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Peran usaha berhasil diperbarui',
+      data: updated_role,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+/**
+ * Controller untuk menghapus peran usaha (DELETE /api/profile/roles/:role_id atau /api/business/roles/:role_id)
+ */
+export const delete_business_role = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const role_id = (req.params.role_id || req.params.id) as string;
+    await delete_role_service(role_id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Peran usaha berhasil dihapus',
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+/**
+ * Controller untuk mendapatkan daftar peran usaha (GET /api/profile/roles atau /api/business/roles)
+ */
+export const list_business_roles = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const entity_id = req.query.entity_id as string | undefined;
+    const role_type = req.query.role_type as string | undefined;
+    const roles = await list_roles_service({ entity_id, role_type });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Daftar peran usaha berhasil diambil',
+      data: roles,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
