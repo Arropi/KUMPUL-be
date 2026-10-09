@@ -10,13 +10,20 @@ import {
   update_supplier_po_status,
   get_supplier_grouped_orders,
   get_umkm_all_orders,
+  confirm_order_pickup,
+  assign_pool_host,
+  ship_supplier_po,
 } from '../../controllers/orders/procurement-order-controller.ts';
 import {
   create_procurement_order_validation,
   uuid_param_validation,
+  confirm_pickup_validation,
+  assign_host_validation,
+  ship_po_validation,
 } from '../../validations/orders/procurement-order-validation.ts';
 import {
   authenticate_jwt,
+  optional_authenticate_jwt,
   require_supplier,
   require_umkm,
 } from '../../middleware/auth-middleware.ts';
@@ -114,7 +121,7 @@ router.get('/umkm/all', authenticate_jwt, require_umkm, get_umkm_all_orders);
  *       400:
  *         description: supplier_role_id wajib disertakan
  */
-router.get('/supplier/pos', list_supplier_pos);
+router.get('/supplier/pos', optional_authenticate_jwt, list_supplier_pos);
 
 /**
  * @swagger
@@ -275,5 +282,132 @@ router.get('/entity/:entity_id', list_orders_by_entity);
  *         description: Pesanan tidak ditemukan
  */
 router.post('/:id/cancel', uuid_param_validation, cancel_procurement_order);
+
+/**
+ * @swagger
+ * /api/orders/{id}/confirm-pickup:
+ *   post:
+ *     summary: Memvalidasi PIN/kode serah terima barang untuk mengubah status pesanan UMKM ke Selesai
+ *     tags: [ProcurementOrders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pickup_code
+ *             properties:
+ *               pickup_code:
+ *                 type: string
+ *                 example: "KMPL-8891"
+ *     responses:
+ *       200:
+ *         description: Pengambilan barang berhasil dikonfirmasi
+ *       400:
+ *         description: Kode pickup tidak valid
+ */
+router.post(
+  '/:id/confirm-pickup',
+  authenticate_jwt,
+  uuid_param_validation,
+  confirm_pickup_validation,
+  confirm_order_pickup
+);
+
+/**
+ * @swagger
+ * /api/orders/supplier/pools/{pool_id}/assign-host:
+ *   put:
+ *     summary: Mengubah UMKM yang menjadi titik Host Hub untuk pesanan pooling konsolidasi
+ *     tags: [ProcurementOrders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: pool_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - host_umkm_role_id
+ *             properties:
+ *               host_umkm_role_id:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       200:
+ *         description: Host hub berhasil diperbarui (dengan warning kapasitas jika kurang)
+ */
+router.put(
+  '/supplier/pools/:pool_id/assign-host',
+  authenticate_jwt,
+  require_supplier,
+  assign_host_validation,
+  assign_pool_host
+);
+
+/**
+ * @swagger
+ * /api/orders/supplier/pos/{id}/ship:
+ *   post:
+ *     summary: Mengunggah bukti pengiriman barang (surat jalan/foto serah terima) dan nomor resi/plat nomor
+ *     tags: [ProcurementOrders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - driver_name
+ *               - tracking_number
+ *             properties:
+ *               driver_name:
+ *                 type: string
+ *                 example: "Budi Santoso"
+ *               tracking_number:
+ *                 type: string
+ *                 example: "B 1234 CD / KMPL-LOG-99"
+ *               delivery_proof_url:
+ *                 type: string
+ *                 example: "https://.../bukti.jpg"
+ *     responses:
+ *       200:
+ *         description: Pengiriman barang berhasil dicatat
+ */
+router.post(
+  '/supplier/pos/:id/ship',
+  authenticate_jwt,
+  require_supplier,
+  uuid_param_validation,
+  ship_po_validation,
+  ship_supplier_po
+);
 
 export default router;

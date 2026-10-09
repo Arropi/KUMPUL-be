@@ -62,6 +62,13 @@ export interface MarketplaceCommodityItem {
   price_tiers: MarketplacePriceTierItem[];
   batch_tag?: MarketplaceBatchTagItem | null;
   active_pools: ActivePoolSummaryItem[];
+  has_tiering_price: boolean;
+  has_open_pools: boolean;
+  open_pools_count: number;
+  is_verified: boolean;
+  source_type: 'SUPPLIER' | 'WASTE';
+  seller_city: string;
+  distance_km?: number | null;
 }
 
 export interface UMKMRecommendationResponse {
@@ -76,6 +83,29 @@ export interface UMKMRecommendationResponse {
       supplier_name: string;
       stock: number;
     }[];
+  }[];
+  healthy_verified_alternatives: {
+    commodity_id: string;
+    commodity_name: string;
+    base_price: number;
+    wholesale_unit: string;
+    supplier_name: string;
+    seller_city: string;
+    storage_temp: StorageTemperatureType;
+    is_verified: boolean;
+    verification_notes?: string | null;
+    image_url?: string | null;
+  }[];
+  nearest_suppliers: {
+    commodity_id: string;
+    commodity_name: string;
+    base_price: number;
+    wholesale_unit: string;
+    supplier_name: string;
+    seller_city: string;
+    distance_km?: number | null;
+    stock: number;
+    image_url?: string | null;
   }[];
   circular_waste_matches: {
     listing_id: string;

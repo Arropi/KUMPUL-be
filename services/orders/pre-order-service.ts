@@ -13,7 +13,11 @@ import {
   find_pools_past_cutoff_or_expired,
 } from '../../repositories/orders/procurement-pool-repositories.ts';
 import { update_commodity_by_id } from '../../repositories/products/supplier-catalog-repositories.ts';
-import { insert_procurement_order } from '../../repositories/orders/procurement-order-repositories.ts';
+import {
+  insert_procurement_order,
+  find_order_by_participant_id,
+  update_procurement_order,
+} from '../../repositories/orders/procurement-order-repositories.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   CreateProcurementPoolDTO,
@@ -21,6 +25,7 @@ import type {
   ProcurementPoolRecord,
   PoolWithParticipants,
   PoolParticipantRecord,
+  PoolParticipantWithUmkm,
   PoolStatus,
   DeliveryMethod,
 } from '../../types/procurement-order-types.ts';
@@ -32,7 +37,7 @@ import type {
 export const calculate_hemat_hub_shipping_costs = async (
   poolId: string
 ): Promise<void> => {
-  // Ambil informasi pool untuk mendapatkan host UMkm
+  // Ambil informasi pool untuk mendapatkan host UMKM
   const pool = await find_pool_by_id(poolId);
   if (!pool) {
     throw new AppError('Procurement pool tidak ditemukan', 404, 'POOL_NOT_FOUND');
@@ -53,18 +58,46 @@ export const calculate_hemat_hub_shipping_costs = async (
     return;
   }
 
-  // Biaya dasar ongkir Hemat Hub (dari konfigurasi yang ada)
+  // Biaya dasar ongkir Hemat Hub dan Direct Door
   const HEMAT_HUB_BASE_COST = 15000;
   const DIRECT_DOOR_BASE_COST = 35000;
 
-  // Jika hanya ada 1 peserta yang memilih Hemat Hub, ubah ke Direct Door
+  // Helper untuk update participant dan sinkronisasi pesanan (umkm_procurement_orders)
+  const syncParticipantShipping = async (
+    participantId: string,
+    newFee: number,
+    newMethod?: DeliveryMethod
+  ) => {
+    const updatePayload: Record<string, any> = {
+      allocated_shipping_fee: String(newFee),
+    };
+    if (newMethod) {
+      updatePayload.delivery_method = newMethod;
+    }
+    await update_pool_participant(participantId, updatePayload);
+
+    // Sinkronisasi pesanan UMKM jika ada (status PENDING)
+    const order = await find_order_by_participant_id(participantId);
+    if (order && order.payment_status === 'PENDING') {
+      const subtotal = parseFloat(order.raw_material_subtotal);
+      const grandTotal = subtotal + newFee;
+      await update_procurement_order(order.id, {
+        shipping_fee: String(newFee),
+        grand_total: String(grandTotal),
+      });
+    }
+  };
+
+  // Jika HANYA ADA 1 PESERTA yang memilih Hemat Hub hingga terpenuhi MOQ:
+  // Otomatis ubah metode ke Direct Door dan kenakan tarif Direct Door (35.000)
   if (hematHubCount === 1) {
     const participant = hematHubParticipants[0];
     if (participant) {
-      await update_pool_participant(participant.id, {
-        allocated_shipping_fee: String(DIRECT_DOOR_BASE_COST),
-        delivery_method: 'DIRECT_DOOR_TO_DOOR' as DeliveryMethod
-      });
+      await syncParticipantShipping(
+        participant.id,
+        DIRECT_DOOR_BASE_COST,
+        'DIRECT_DOOR_TO_DOOR' as DeliveryMethod
+      );
     }
     return;
   }
@@ -74,7 +107,6 @@ export const calculate_hemat_hub_shipping_costs = async (
   let regularParticipants: PoolParticipantRecord[] = [];
 
   if (pool.host_umkm_role_id) {
-    // Cari peserta yang merupakan host berdasarkan role ID
     hostParticipant = hematHubParticipants.find(
       p => p.umkm_role_id === pool.host_umkm_role_id
     ) ?? null;
@@ -85,13 +117,11 @@ export const calculate_hemat_hub_shipping_costs = async (
     hostParticipant = hematHubParticipants[0] ?? null;
   }
 
-  // Peserta biasa adalah semua hemat hub participant selain host
   if (hostParticipant) {
     regularParticipants = hematHubParticipants.filter(
       p => p.id !== hostParticipant!.id
     );
   } else {
-    // Jika tidak ada host yang teridentifikasi, semua dianggap biasa
     regularParticipants = [...hematHubParticipants];
     hostParticipant = null;
   }
@@ -100,64 +130,45 @@ export const calculate_hemat_hub_shipping_costs = async (
     case 2: {
       // Biaya dibagi 2 sama rata
       const sharePerPerson = Math.floor(HEMAT_HUB_BASE_COST / 2);
-
-      // Update biaya untuk semua peserta Hemat Hub
       for (const participant of hematHubParticipants) {
-        await update_pool_participant(participant.id, {
-          allocated_shipping_fee: String(sharePerPerson)
-        });
+        await syncParticipantShipping(participant.id, sharePerPerson);
       }
       break;
     }
 
     case 3: {
-      // Biaya dibagi 3, host hanya membayar 20% dari bagian mereka
+      // Biaya dibagi 3, host hanya membayar 20% dari bagian mereka (diskon 80%)
       const normalShare = Math.floor(HEMAT_HUB_BASE_COST / 3);
-      const hostShare = Math.floor(normalShare * 0.2); // 20% dari bagian normal host
+      const hostShare = Math.floor(normalShare * 0.2);
       const remainingForOthers = HEMAT_HUB_BASE_COST - hostShare;
-      const otherShare = Math.floor(remainingForOthers / 2); // Sisa dibagi 2 untuk yang lain
+      const otherShare = Math.floor(remainingForOthers / 2);
 
-      // Update biaya untuk host
       if (hostParticipant) {
-        await update_pool_participant(hostParticipant.id, {
-          allocated_shipping_fee: String(hostShare)
-        });
+        await syncParticipantShipping(hostParticipant.id, hostShare);
       }
 
-      // Update biaya untuk peserta biasa
       for (const participant of regularParticipants) {
-        await update_pool_participant(participant.id, {
-          allocated_shipping_fee: String(otherShare)
-        });
+        await syncParticipantShipping(participant.id, otherShare);
       }
       break;
     }
 
     default: {
-      // Lebih dari 3 peserta: host gratis, yang lain membagi biaya
+      // Lebih dari 3 peserta: Host GRATIS ONGKIR (0), peserta biasa membagi biaya
       if (hematHubCount > 3 && regularParticipants.length > 0) {
         const sharePerPerson = Math.floor(HEMAT_HUB_BASE_COST / regularParticipants.length);
 
-        // Host gratis
         if (hostParticipant) {
-          await update_pool_participant(hostParticipant.id, {
-            allocated_shipping_fee: '0'
-          });
+          await syncParticipantShipping(hostParticipant.id, 0);
         }
 
-        // Yang lain membagi biaya
         for (const participant of regularParticipants) {
-          await update_pool_participant(participant.id, {
-            allocated_shipping_fee: String(sharePerPerson)
-          });
+          await syncParticipantShipping(participant.id, sharePerPerson);
         }
       } else {
-        // Fallback: bagi sama rata jika tidak ada host yang jelas atau hanya 2 peserta
         const sharePerPerson = Math.floor(HEMAT_HUB_BASE_COST / hematHubCount);
         for (const participant of hematHubParticipants) {
-          await update_pool_participant(participant.id, {
-            allocated_shipping_fee: String(sharePerPerson)
-          });
+          await syncParticipantShipping(participant.id, sharePerPerson);
         }
       }
       break;
@@ -221,10 +232,20 @@ export const list_procurement_pools_service = async (
   limit_count = 20,
   offset_count = 0,
   commodity_id?: string
-): Promise<ProcurementPoolRecord[]> => {
+): Promise<Array<ProcurementPoolRecord & { participants: PoolParticipantWithUmkm[] }>> => {
   // Evaluasi otomatis cut-off pool
   await evaluate_pool_cutoffs_service();
-  return await find_pools_by_status(status, limit_count, offset_count, commodity_id);
+  const pools = await find_pools_by_status(status, limit_count, offset_count, commodity_id);
+  const poolsWithParticipants = await Promise.all(
+    pools.map(async (pool) => {
+      const participants = await find_participants_by_pool_id(pool.id);
+      return {
+        ...pool,
+        participants,
+      };
+    })
+  );
+  return poolsWithParticipants;
 };
 
 export const get_procurement_pool_by_id_service = async (
@@ -254,6 +275,8 @@ export const join_procurement_pool_service = async (
   participant: PoolParticipantRecord;
   pool: ProcurementPoolRecord;
   order_id: string;
+  snap_token?: string;
+  snap_redirect_url?: string;
 }> => {
   const today_str = new Date().toISOString().slice(0, 10);
   let pool: ProcurementPoolRecord;
@@ -347,7 +370,7 @@ export const join_procurement_pool_service = async (
     const cutoff_ms = req_date.getTime() - lead_time * 86400000;
     const cutoff_date_str = new Date(cutoff_ms).toISOString().slice(0, 10);
 
-    if (cutoff_date_str <= today_str) {
+    if (cutoff_date_str < today_str) {
       throw new AppError(
         `Tanggal kebutuhan terlalu mepet dengan waktu persiapan supplier (${lead_time} hari lead time). Batas cut-off (${cutoff_date_str}) telah lewat.`,
         400,
@@ -357,6 +380,7 @@ export const join_procurement_pool_service = async (
 
     pool = await insert_procurement_pool({
       commodity_id: commodity.id,
+      host_umkm_role_id: payload.umkm_role_id,
       target_moq: String(commodity.base_moq),
       accumulated_qty: '0.00',
       pool_status: 'OPEN' as PoolStatus,
@@ -365,6 +389,9 @@ export const join_procurement_pool_service = async (
       cutoff_date: cutoff_date_str,
       is_asap_allowed: payload.is_urgent_asap ?? true,
       expires_at: new Date(cutoff_date_str + 'T23:59:59.999Z'),
+      default_hub_address: payload.final_delivery_address?.trim() || null,
+      hub_latitude: payload.final_delivery_lat !== undefined ? String(payload.final_delivery_lat) : null,
+      hub_longitude: payload.final_delivery_lng !== undefined ? String(payload.final_delivery_lng) : null,
     });
   }
 
@@ -383,9 +410,18 @@ export const join_procurement_pool_service = async (
     throw new AppError('Kuantitas pesanan harus lebih besar dari 0', 400, 'INVALID_ORDER_QTY');
   }
 
+  // Cek apakah UMKM sudah bergabung di pool ini (tidak boleh duplikat di pool ID yang sama)
+  const existing_participants_in_pool = await find_participants_by_pool_id(pool.id);
+  const existing_participant = existing_participants_in_pool.find(
+    (p) => p.umkm_role_id === payload.umkm_role_id
+  );
+
+  const old_order_qty = existing_participant ? parseFloat(existing_participant.order_qty) : 0;
+  const delta_qty = order_qty_num - old_order_qty;
+
   const current_stock = parseFloat(commodity.stock || '0');
   const reserved_stock = parseFloat(commodity.reserved_stock || '0');
-  if (current_stock - reserved_stock < order_qty_num) {
+  if (delta_qty > 0 && current_stock - reserved_stock < delta_qty) {
     throw new AppError('Sisa kuota stok komoditas supplier tidak mencukupi', 400, 'INSUFFICIENT_STOCK');
   }
 
@@ -394,24 +430,53 @@ export const join_procurement_pool_service = async (
     ? calculate_allocated_shipping(payload.delivery_method)
     : 0;
 
-  // 5. Simpan partisipan pool
-  const participant_payload = {
-    pool_id: pool.id,
-    umkm_role_id: payload.umkm_role_id,
-    order_qty: String(order_qty_num),
-    delivery_method: payload.delivery_method ?? null,
-    required_delivery_date: payload.required_delivery_date || pool.target_delivery_date || null,
-    is_urgent_asap: payload.is_urgent_asap ?? false,
-    final_delivery_address: payload.final_delivery_address.trim(),
-    final_delivery_lat: String(payload.final_delivery_lat),
-    final_delivery_lng: String(payload.final_delivery_lng),
-    allocated_shipping_fee: String(allocated_shipping),
-  };
-  const created_participant = await insert_pool_participant(participant_payload as any);
+  // 5. Simpan / Perbarui partisipan pool
+  let active_participant: PoolParticipantRecord;
+
+  if (existing_participant) {
+    // Skenario A: Ubah Partisipasi (Update pool yang sudah diikuti sebelumnya)
+    await update_pool_participant(existing_participant.id, {
+      order_qty: String(order_qty_num),
+      delivery_method: payload.delivery_method ?? existing_participant.delivery_method,
+      required_delivery_date: payload.required_delivery_date || existing_participant.required_delivery_date,
+      is_urgent_asap: payload.is_urgent_asap ?? existing_participant.is_urgent_asap,
+      final_delivery_address: payload.final_delivery_address.trim(),
+      final_delivery_lat: String(payload.final_delivery_lat),
+      final_delivery_lng: String(payload.final_delivery_lng),
+      allocated_shipping_fee: String(allocated_shipping),
+    });
+
+    active_participant = {
+      ...existing_participant,
+      order_qty: String(order_qty_num),
+      delivery_method: (payload.delivery_method ?? existing_participant.delivery_method) as any,
+      required_delivery_date: payload.required_delivery_date || existing_participant.required_delivery_date,
+      is_urgent_asap: payload.is_urgent_asap ?? existing_participant.is_urgent_asap,
+      final_delivery_address: payload.final_delivery_address.trim(),
+      final_delivery_lat: String(payload.final_delivery_lat),
+      final_delivery_lng: String(payload.final_delivery_lng),
+      allocated_shipping_fee: String(allocated_shipping),
+    };
+  } else {
+    // Skenario B: Partisipasi Baru (Belum pernah join di pool ID ini)
+    const participant_payload = {
+      pool_id: pool.id,
+      umkm_role_id: payload.umkm_role_id,
+      order_qty: String(order_qty_num),
+      delivery_method: payload.delivery_method ?? null,
+      required_delivery_date: payload.required_delivery_date || pool.target_delivery_date || null,
+      is_urgent_asap: payload.is_urgent_asap ?? false,
+      final_delivery_address: payload.final_delivery_address.trim(),
+      final_delivery_lat: String(payload.final_delivery_lat),
+      final_delivery_lng: String(payload.final_delivery_lng),
+      allocated_shipping_fee: String(allocated_shipping),
+    };
+    active_participant = await insert_pool_participant(participant_payload as any);
+  }
 
   // 6. Akumulasi kuantitas baru dan tentukan harga tier komoditas
   const current_accumulated = parseFloat(pool.accumulated_qty || '0');
-  const new_accumulated = current_accumulated + order_qty_num;
+  const new_accumulated = Math.max(0, current_accumulated + delta_qty);
   const target_moq_num = parseFloat(pool.target_moq);
 
   let best_unit_price = parseFloat(commodity.base_price || '0');
@@ -470,28 +535,74 @@ export const join_procurement_pool_service = async (
       });
     }
 
-    // Hitung dan update biaya ongkir Hemat Hub berdasarkan aturan baru
+    // Hitung dan update biaya ongkir Hemat Hub berdasarkan aturan pembagian biaya
     await calculate_hemat_hub_shipping_costs(pool.id);
+
+    // Sinkronisasi harga terkunci dan shipping fee untuk semua pesanan partisipan sebelumnya di pool ini
+    const all_participants = await find_participants_by_pool_id(pool.id);
+    for (const p of all_participants) {
+      if (p.id === active_participant.id) continue;
+      const existing_order = await find_order_by_participant_id(p.id);
+      if (existing_order && existing_order.payment_status === 'PENDING') {
+        const p_qty = parseFloat(p.order_qty);
+        const p_subtotal = p_qty * best_unit_price;
+        const p_shipping = parseFloat(p.allocated_shipping_fee || '0');
+        await update_procurement_order(existing_order.id, {
+          raw_material_subtotal: String(p_subtotal),
+          shipping_fee: String(p_shipping),
+          grand_total: String(p_subtotal + p_shipping),
+        });
+      }
+    }
   }
 
-  // 9. Buat otomatis pesanan pengadaan UMKM (UMKM Procurement Order)
+  // 9. Buat / Perbarui otomatis pesanan pengadaan UMKM (UMKM Procurement Order)
+  const refreshed_participant =
+    (await find_participants_by_pool_id(pool.id)).find((p) => p.id === active_participant.id) ?? active_participant;
+  const final_shipping_fee = parseFloat(refreshed_participant.allocated_shipping_fee || String(allocated_shipping));
   const subtotal = order_qty_num * best_unit_price;
-  // Gunakan allocated_shipping yang sudah dihitung berdasarkan delivery_method awal
-  // Nota: Ini mungkin akan di-override oleh calculate_hemat_hub_shipping_costs jika pool menjadi LOCKED
-  const grand_total = subtotal + allocated_shipping;
+  const grand_total = subtotal + final_shipping_fee;
 
-  const created_order = await insert_procurement_order({
-    participant_id: created_participant.id,
-    raw_material_subtotal: String(subtotal),
-    shipping_fee: String(allocated_shipping),
-    grand_total: String(grand_total),
-    payment_status: 'PENDING',
-  });
+  let effective_order_id: string;
+  const existing_order_record = await find_order_by_participant_id(active_participant.id);
+  if (existing_order_record) {
+    await update_procurement_order(existing_order_record.id, {
+      raw_material_subtotal: String(subtotal),
+      shipping_fee: String(final_shipping_fee),
+      grand_total: String(grand_total),
+    });
+    effective_order_id = existing_order_record.id;
+  } else {
+    const created_order = await insert_procurement_order({
+      participant_id: active_participant.id,
+      raw_material_subtotal: String(subtotal),
+      shipping_fee: String(final_shipping_fee),
+      grand_total: String(grand_total),
+      payment_status: 'PENDING',
+    });
+    effective_order_id = created_order.id;
+  }
+
+  let snap_token: string | undefined;
+  let snap_redirect_url: string | undefined;
+
+  if (is_target_met) {
+    try {
+      const { initiate_order_payment_service } = await import('../payments/payment-service.ts');
+      const payment_init = await initiate_order_payment_service(effective_order_id);
+      snap_token = payment_init.snap_token;
+      snap_redirect_url = payment_init.snap_redirect_url;
+    } catch (payment_err) {
+      console.warn('[Auto Initiate Payment Warning]:', payment_err);
+    }
+  }
 
   return {
-    participant: created_participant,
+    participant: refreshed_participant,
     pool: updated_pool ?? pool,
-    order_id: created_order.id,
+    order_id: effective_order_id,
+    snap_token,
+    snap_redirect_url,
   };
 };
 

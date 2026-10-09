@@ -338,6 +338,9 @@ export const consolidated_pos = pgTable('consolidated_pos', {
   total_amount: numeric('total_amount').notNull(),
   po_status: po_status_enum('po_status').default('ISSUED').notNull(),
   delivery_date: date('delivery_date'),
+  driver_name: varchar('driver_name', { length: 150 }),
+  tracking_number: varchar('tracking_number', { length: 150 }),
+  delivery_proof_url: text('delivery_proof_url'),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

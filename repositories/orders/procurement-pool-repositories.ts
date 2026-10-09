@@ -1,4 +1,5 @@
 import { eq, desc, and, inArray, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { db } from '../../config/db.ts';
 import {
   procurement_pools,
@@ -7,11 +8,13 @@ import {
   supplier_commodities,
   commodity_price_tiers,
   business_roles,
+  business_entities,
 } from '../../config/schema.ts';
 import type {
   ProcurementPoolRecord,
   ProcurementPoolInsertPayload,
   PoolParticipantRecord,
+  PoolParticipantWithUmkm,
   PoolParticipantInsertPayload,
   ConsolidatedPORecord,
   ConsolidatedPOInsertPayload,
@@ -171,14 +174,36 @@ export const find_participant_by_id = async (
 
 export const find_participants_by_pool_id = async (
   pool_id: string
-): Promise<PoolParticipantRecord[]> => {
+): Promise<PoolParticipantWithUmkm[]> => {
   const records = await db
-    .select()
+    .select({
+      id: pool_participants.id,
+      pool_id: pool_participants.pool_id,
+      umkm_role_id: pool_participants.umkm_role_id,
+      order_qty: pool_participants.order_qty,
+      delivery_method: pool_participants.delivery_method,
+      required_delivery_date: pool_participants.required_delivery_date,
+      is_urgent_asap: pool_participants.is_urgent_asap,
+      final_delivery_address: pool_participants.final_delivery_address,
+      final_delivery_lat: pool_participants.final_delivery_lat,
+      final_delivery_lng: pool_participants.final_delivery_lng,
+      allocated_shipping_fee: pool_participants.allocated_shipping_fee,
+      pickup_code: pool_participants.pickup_code,
+      is_picked_up: pool_participants.is_picked_up,
+      picked_up_at: pool_participants.picked_up_at,
+      created_at: pool_participants.created_at,
+      umkm_name: business_entities.legal_name,
+      entity_address: business_entities.default_address,
+      storage_capacity: business_roles.storage_capacity,
+      phone_number: business_entities.phone_number,
+    })
     .from(pool_participants)
+    .leftJoin(business_roles, eq(pool_participants.umkm_role_id, business_roles.id))
+    .leftJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
     .where(eq(pool_participants.pool_id, pool_id))
     .orderBy(desc(pool_participants.created_at));
 
-  return records;
+  return records as PoolParticipantWithUmkm[];
 };
 
 export const find_participants_by_umkm_role = async (
@@ -254,10 +279,38 @@ export const find_consolidated_pos_by_supplier = async (
   supplier_role_id: string,
   limit_count = 20,
   offset_count = 0
-): Promise<ConsolidatedPORecord[]> => {
+) => {
+  const host_roles = alias(business_roles, 'host_roles');
+  const host_entities = alias(business_entities, 'host_entities');
+
   const records = await db
-    .select()
+    .select({
+      id: consolidated_pos.id,
+      pool_id: consolidated_pos.pool_id,
+      supplier_role_id: consolidated_pos.supplier_role_id,
+      total_amount: consolidated_pos.total_amount,
+      po_status: consolidated_pos.po_status,
+      delivery_date: consolidated_pos.delivery_date,
+      driver_name: consolidated_pos.driver_name,
+      tracking_number: consolidated_pos.tracking_number,
+      delivery_proof_url: consolidated_pos.delivery_proof_url,
+      created_at: consolidated_pos.created_at,
+      updated_at: consolidated_pos.updated_at,
+      commodity_id: supplier_commodities.id,
+      commodity_name: supplier_commodities.name,
+      wholesale_unit: supplier_commodities.wholesale_unit,
+      total_quantity: procurement_pools.accumulated_qty,
+      hub_name: host_entities.legal_name,
+      hub_address: procurement_pools.default_hub_address,
+      host_umkm_role_id: procurement_pools.host_umkm_role_id,
+      target_delivery_date: procurement_pools.target_delivery_date,
+      estimated_delivery_date: procurement_pools.estimated_delivery_date,
+    })
     .from(consolidated_pos)
+    .innerJoin(procurement_pools, eq(consolidated_pos.pool_id, procurement_pools.id))
+    .innerJoin(supplier_commodities, eq(procurement_pools.commodity_id, supplier_commodities.id))
+    .leftJoin(host_roles, eq(procurement_pools.host_umkm_role_id, host_roles.id))
+    .leftJoin(host_entities, eq(host_roles.entity_id, host_entities.id))
     .where(eq(consolidated_pos.supplier_role_id, supplier_role_id))
     .orderBy(desc(consolidated_pos.created_at))
     .limit(limit_count)
@@ -290,6 +343,22 @@ export const update_consolidated_po_status = async (
     .update(consolidated_pos)
     .set({
       po_status,
+      updated_at: new Date(),
+    })
+    .where(eq(consolidated_pos.id, po_id))
+    .returning();
+
+  return updated[0] ?? null;
+};
+
+export const update_consolidated_po = async (
+  po_id: string,
+  payload: Partial<ConsolidatedPOInsertPayload>
+): Promise<ConsolidatedPORecord | null> => {
+  const updated = await db
+    .update(consolidated_pos)
+    .set({
+      ...payload,
       updated_at: new Date(),
     })
     .where(eq(consolidated_pos.id, po_id))

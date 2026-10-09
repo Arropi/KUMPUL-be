@@ -105,3 +105,23 @@ export const evaluate_expired_orders = async (
     next(controller_error);
   }
 };
+
+export const simulate_sandbox_payment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const order_id = req.body.order_id as string;
+    const { simulate_sandbox_payment_service } = await import('../../services/payments/payment-service.ts');
+    const result = await simulate_sandbox_payment_service(order_id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Simulasi pembayaran Sandbox berhasil diselesaikan (Settled)',
+      data: result,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
