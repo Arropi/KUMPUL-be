@@ -10,7 +10,7 @@ import {
   get_waste_listings,
   refer_listing_to_offtaker,
 } from '../../controllers/waste/waste-controller.ts';
-import { authenticate_jwt } from '../../middleware/auth-middleware.ts';
+import { authenticate_jwt, authenticate_optional_jwt } from '../../middleware/auth-middleware.ts';
 import {
   buy_waste_validation,
   confirm_pickup_validation,
@@ -61,7 +61,7 @@ const router = Router();
  *       200:
  *         description: Berhasil mengambil daftar limbah
  */
-router.get('/', get_waste_listings);
+router.get('/', authenticate_optional_jwt, get_waste_listings);
 
 /**
  * @swagger

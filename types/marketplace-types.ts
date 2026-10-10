@@ -8,6 +8,9 @@ export interface MarketplaceFilterDTO {
   ready_stock?: boolean;
   page?: number;
   limit?: number;
+  exclude_role_id?: string | null;
+  exclude_role_ids?: string[];
+  exclude_entity_id?: string | null;
 }
 
 export interface MarketplacePriceTierItem {
@@ -51,8 +54,11 @@ export interface MarketplaceCommodityItem {
   closed_date?: string | null;
   allows_under_moq: boolean;
   under_moq_price_per_kg?: number | null;
+  supplier_role_id?: string;
+  supplier_entity_id?: string;
   supplier: {
     role_id: string;
+    entity_id?: string;
     legal_name: string;
     default_address: string;
     latitude: number;
@@ -139,4 +145,9 @@ export interface SupplierRecommendationResponse {
     ingredient_name: string;
     recipe_occurrences: number;
   }[];
+  low_stock_recommendations?: UMKMRecommendationResponse['low_stock_recommendations'];
+  healthy_verified_alternatives?: UMKMRecommendationResponse['healthy_verified_alternatives'];
+  nearest_suppliers?: UMKMRecommendationResponse['nearest_suppliers'];
+  circular_waste_matches?: UMKMRecommendationResponse['circular_waste_matches'];
+  cost_saving_active_pools?: UMKMRecommendationResponse['cost_saving_active_pools'];
 }

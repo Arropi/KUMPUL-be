@@ -15,7 +15,14 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-
  * Helper untuk mengekstrak dan memverifikasi token JWT dari header Authorization.
  */
 const extract_and_verify_token = (req: Request): AuthUserPayload => {
-  const authorization_header = req.headers.authorization;
+  let authorization_header = req.headers.authorization;
+  if (!authorization_header && req.headers.cookie) {
+    const match = req.headers.cookie.match(/(?:^|;\s*)kumpul_token=([^;]+)/);
+    if (match && match[1]) {
+      authorization_header = `Bearer ${decodeURIComponent(match[1])}`;
+    }
+  }
+
   if (!authorization_header) {
     throw new AppError(
       'Token otorisasi tidak ditemukan pada header Authorization',
@@ -153,6 +160,26 @@ export const authenticate_jwt = (
     next();
   } catch (auth_error) {
     next(auth_error);
+  }
+};
+
+/**
+ * Middleware Autentikasi Opsional (JWT):
+ * Jika token disediakan dan valid, simpan ke req.user.
+ * Jika token tidak ada atau tidak valid, izinkan request lanjut sebagai anonim/guest.
+ */
+export const authenticate_optional_jwt = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  try {
+    const decoded_user = extract_and_verify_token(req);
+    req.user = decoded_user;
+    next();
+  } catch {
+    req.user = undefined;
+    next();
   }
 };
 

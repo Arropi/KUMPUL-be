@@ -33,7 +33,7 @@ export const upload_file_controller = async (
       (req.query?.entity_id as string) ||
       (req as any).user?.entity_id;
 
-    if (role_id || entity_id) {
+    if (target_folder === 'katalog' && (role_id || entity_id)) {
       let entity = null;
       let supplier_role = null;
 

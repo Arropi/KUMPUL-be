@@ -32,6 +32,9 @@ export interface WasteListingFilterDTO {
   search?: string;
   page?: number;
   limit?: number;
+  exclude_role_id?: string | null;
+  exclude_role_ids?: string[];
+  exclude_entity_id?: string | null;
 }
 
 export interface BuyWasteListingDTO {
