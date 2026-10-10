@@ -168,11 +168,16 @@ export const get_nearest_offtakers = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const role_id = await get_authenticated_role_id(req);
+    let role_id = '';
+    try {
+      role_id = await get_authenticated_role_id(req);
+    } catch {
+      // Optional auth fallback
+    }
     const query = {
       listing_id: req.query.listing_id as string | undefined,
-      latitude: req.query.latitude ? Number(req.query.latitude) : undefined,
-      longitude: req.query.longitude ? Number(req.query.longitude) : undefined,
+      latitude: req.query.latitude ? Number(req.query.latitude) : -7.3248,
+      longitude: req.query.longitude ? Number(req.query.longitude) : 112.7758,
       limit: req.query.limit ? Number(req.query.limit) : 5,
     };
 
