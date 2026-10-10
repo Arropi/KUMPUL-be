@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { db } from '../../config/db.ts';
 import {
   business_entities,
@@ -57,6 +57,18 @@ export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO)
     );
   }
 
+  if (filter.exclude_role_id) {
+    conditions.push(ne(supplier_commodities.supplier_role_id, filter.exclude_role_id));
+  }
+
+  if (filter.exclude_role_ids && filter.exclude_role_ids.length > 0) {
+    conditions.push(notInArray(supplier_commodities.supplier_role_id, filter.exclude_role_ids));
+  }
+
+  if (filter.exclude_entity_id) {
+    conditions.push(ne(business_roles.entity_id, filter.exclude_entity_id));
+  }
+
   const where_clause = and(...conditions);
 
   const base_query = db
@@ -78,6 +90,7 @@ export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO)
       under_moq_price_per_kg: supplier_commodities.under_moq_price_per_kg,
       created_at: supplier_commodities.created_at,
       supplier_role_id: business_roles.id,
+      supplier_entity_id: business_entities.id,
       supplier_legal_name: business_entities.legal_name,
       supplier_address: business_entities.default_address,
       supplier_latitude: business_entities.latitude,
@@ -177,8 +190,11 @@ export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO)
       under_moq_price_per_kg: c.under_moq_price_per_kg
         ? Number(c.under_moq_price_per_kg)
         : null,
+      supplier_role_id: c.supplier_role_id,
+      supplier_entity_id: c.supplier_entity_id,
       supplier: {
         role_id: c.supplier_role_id,
+        entity_id: c.supplier_entity_id,
         legal_name: c.supplier_legal_name,
         default_address: c.supplier_address,
         latitude: Number(c.supplier_latitude),
@@ -371,12 +387,32 @@ export const find_umkm_low_stock_records = async (umkm_role_id: string) => {
   }));
 };
 
-export const find_matching_commodities_by_names = async (ingredient_names: string[]) => {
+export const find_matching_commodities_by_names = async (
+  ingredient_names: string[],
+  exclude_role_id?: string | null,
+  exclude_entity_id?: string | null,
+  exclude_role_ids?: string[]
+) => {
   if (ingredient_names.length === 0) return [];
 
   const name_clauses = ingredient_names.map((name) =>
     ilike(supplier_commodities.name, `%${name}%`)
   );
+
+  const conditions = [
+    eq(supplier_commodities.is_marketplace_active, true),
+    or(...name_clauses)!,
+  ];
+
+  if (exclude_role_id) {
+    conditions.push(ne(supplier_commodities.supplier_role_id, exclude_role_id));
+  }
+  if (exclude_role_ids && exclude_role_ids.length > 0) {
+    conditions.push(notInArray(supplier_commodities.supplier_role_id, exclude_role_ids));
+  }
+  if (exclude_entity_id) {
+    conditions.push(ne(business_roles.entity_id, exclude_entity_id));
+  }
 
   return await db
     .select({
@@ -385,20 +421,37 @@ export const find_matching_commodities_by_names = async (ingredient_names: strin
       base_price: supplier_commodities.base_price,
       stock: supplier_commodities.stock,
       supplier_name: business_entities.legal_name,
+      supplier_role_id: supplier_commodities.supplier_role_id,
+      supplier_entity_id: business_entities.id,
     })
     .from(supplier_commodities)
     .innerJoin(business_roles, eq(supplier_commodities.supplier_role_id, business_roles.id))
     .innerJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
-    .where(
-      and(
-        eq(supplier_commodities.is_marketplace_active, true),
-        or(...name_clauses)!
-      )
-    )
+    .where(and(...conditions))
     .limit(15);
 };
 
-export const find_available_waste_listings_for_recommendation = async (limit = 10) => {
+export const find_available_waste_listings_for_recommendation = async (
+  limit = 10,
+  exclude_role_id?: string | null,
+  exclude_entity_id?: string | null,
+  exclude_role_ids?: string[]
+) => {
+  const conditions = [
+    eq(waste_listings.listing_status, 'AVAILABLE'),
+    eq(waste_listings.is_marketplace_visible, true),
+  ];
+
+  if (exclude_role_id) {
+    conditions.push(ne(waste_listings.seller_role_id, exclude_role_id));
+  }
+  if (exclude_role_ids && exclude_role_ids.length > 0) {
+    conditions.push(notInArray(waste_listings.seller_role_id, exclude_role_ids));
+  }
+  if (exclude_entity_id) {
+    conditions.push(ne(business_roles.entity_id, exclude_entity_id));
+  }
+
   return await db
     .select({
       id: waste_listings.id,
@@ -407,20 +460,38 @@ export const find_available_waste_listings_for_recommendation = async (limit = 1
       available_weight: waste_listings.available_weight,
       price_per_kg: waste_listings.price_per_kg,
       seller_name: business_entities.legal_name,
+      seller_role_id: waste_listings.seller_role_id,
+      seller_entity_id: business_entities.id,
     })
     .from(waste_listings)
     .innerJoin(business_roles, eq(waste_listings.seller_role_id, business_roles.id))
     .innerJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
-    .where(
-      and(
-        eq(waste_listings.listing_status, 'AVAILABLE'),
-        eq(waste_listings.is_marketplace_visible, true)
-      )
-    )
+    .where(and(...conditions))
     .limit(limit);
 };
 
-export const find_active_pools_with_details = async () => {
+export const find_active_pools_with_details = async (
+  exclude_role_id?: string | null,
+  exclude_entity_id?: string | null,
+  exclude_role_ids?: string[]
+) => {
+  const pool_status_clause = or(
+    eq(procurement_pools.pool_status, 'OPEN'),
+    eq(procurement_pools.pool_status, 'AGGREGATING')
+  )!;
+
+  const conditions = [pool_status_clause];
+
+  if (exclude_role_id) {
+    conditions.push(ne(supplier_commodities.supplier_role_id, exclude_role_id));
+  }
+  if (exclude_role_ids && exclude_role_ids.length > 0) {
+    conditions.push(notInArray(supplier_commodities.supplier_role_id, exclude_role_ids));
+  }
+  if (exclude_entity_id) {
+    conditions.push(ne(business_roles.entity_id, exclude_entity_id));
+  }
+
   return await db
     .select({
       pool_id: procurement_pools.id,
@@ -431,22 +502,26 @@ export const find_active_pools_with_details = async () => {
       target_delivery_date: procurement_pools.target_delivery_date,
       base_price: supplier_commodities.base_price,
       locked_tier_price: procurement_pools.locked_tier_price,
+      supplier_role_id: supplier_commodities.supplier_role_id,
+      supplier_entity_id: business_roles.entity_id,
     })
     .from(procurement_pools)
     .innerJoin(
       supplier_commodities,
       eq(procurement_pools.commodity_id, supplier_commodities.id)
     )
-    .where(
-      or(
-        eq(procurement_pools.pool_status, 'OPEN'),
-        eq(procurement_pools.pool_status, 'AGGREGATING')
-      )
+    .innerJoin(
+      business_roles,
+      eq(supplier_commodities.supplier_role_id, business_roles.id)
     )
+    .where(and(...conditions))
     .limit(10);
 };
 
-export const find_market_price_benchmarks = async (supplier_role_id: string) => {
+export const find_market_price_benchmarks = async (
+  supplier_role_id: string,
+  entity_id?: string | null
+) => {
   // Ambil komoditas milik supplier ini
   const my_commodities = await db
     .select({
@@ -457,14 +532,23 @@ export const find_market_price_benchmarks = async (supplier_role_id: string) => 
     .from(supplier_commodities)
     .where(eq(supplier_commodities.supplier_role_id, supplier_role_id));
 
-  // Ambil rata-rata harga pasar per nama komoditas di platform
+  // Ambil rata-rata harga pasar dari penjual lain di platform (kecualikan komoditas akun sendiri)
+  const market_conditions = [
+    eq(supplier_commodities.is_marketplace_active, true),
+    ne(supplier_commodities.supplier_role_id, supplier_role_id),
+  ];
+  if (entity_id) {
+    market_conditions.push(ne(business_roles.entity_id, entity_id));
+  }
+
   const market_averages = await db
     .select({
       name: supplier_commodities.name,
       avg_price: sql<string>`AVG(${supplier_commodities.base_price}::numeric)`,
     })
     .from(supplier_commodities)
-    .where(eq(supplier_commodities.is_marketplace_active, true))
+    .innerJoin(business_roles, eq(supplier_commodities.supplier_role_id, business_roles.id))
+    .where(and(...market_conditions))
     .groupBy(supplier_commodities.name);
 
   const avg_map = new Map<string, number>();
@@ -510,7 +594,27 @@ export const find_popular_recipe_ingredients = async (limit = 10) => {
   }));
 };
 
-export const find_healthy_verified_commodities = async (limit = 6) => {
+export const find_healthy_verified_commodities = async (
+  limit = 6,
+  exclude_role_id?: string | null,
+  exclude_entity_id?: string | null,
+  exclude_role_ids?: string[]
+) => {
+  const conditions = [
+    eq(supplier_commodities.is_marketplace_active, true),
+    eq(commodity_batch_tags.is_verified, true),
+  ];
+
+  if (exclude_role_id) {
+    conditions.push(ne(supplier_commodities.supplier_role_id, exclude_role_id));
+  }
+  if (exclude_role_ids && exclude_role_ids.length > 0) {
+    conditions.push(notInArray(supplier_commodities.supplier_role_id, exclude_role_ids));
+  }
+  if (exclude_entity_id) {
+    conditions.push(ne(business_roles.entity_id, exclude_entity_id));
+  }
+
   const result = await db
     .select({
       commodity_id: supplier_commodities.id,
@@ -520,6 +624,8 @@ export const find_healthy_verified_commodities = async (limit = 6) => {
       image_url: supplier_commodities.image_url,
       supplier_name: business_entities.legal_name,
       supplier_address: business_entities.default_address,
+      supplier_role_id: supplier_commodities.supplier_role_id,
+      supplier_entity_id: business_entities.id,
       storage_temp: commodity_batch_tags.storage_temperature_type,
       is_verified: commodity_batch_tags.is_verified,
       verification_notes: commodity_batch_tags.verification_notes,
@@ -531,12 +637,7 @@ export const find_healthy_verified_commodities = async (limit = 6) => {
       commodity_batch_tags,
       eq(supplier_commodities.id, commodity_batch_tags.commodity_id)
     )
-    .where(
-      and(
-        eq(supplier_commodities.is_marketplace_active, true),
-        eq(commodity_batch_tags.is_verified, true)
-      )
-    )
+    .where(and(...conditions))
     .orderBy(desc(commodity_batch_tags.created_at))
     .limit(limit);
 
@@ -546,6 +647,8 @@ export const find_healthy_verified_commodities = async (limit = 6) => {
     base_price: Number(r.base_price),
     wholesale_unit: r.wholesale_unit,
     supplier_name: r.supplier_name,
+    supplier_role_id: r.supplier_role_id,
+    supplier_entity_id: r.supplier_entity_id,
     seller_city: extract_city_from_address(r.supplier_address),
     storage_temp: r.storage_temp,
     is_verified: Boolean(r.is_verified),
@@ -554,7 +657,24 @@ export const find_healthy_verified_commodities = async (limit = 6) => {
   }));
 };
 
-export const find_nearest_suppliers_commodities = async (limit = 6) => {
+export const find_nearest_suppliers_commodities = async (
+  limit = 6,
+  exclude_role_id?: string | null,
+  exclude_entity_id?: string | null,
+  exclude_role_ids?: string[]
+) => {
+  const conditions = [eq(supplier_commodities.is_marketplace_active, true)];
+
+  if (exclude_role_id) {
+    conditions.push(ne(supplier_commodities.supplier_role_id, exclude_role_id));
+  }
+  if (exclude_role_ids && exclude_role_ids.length > 0) {
+    conditions.push(notInArray(supplier_commodities.supplier_role_id, exclude_role_ids));
+  }
+  if (exclude_entity_id) {
+    conditions.push(ne(business_roles.entity_id, exclude_entity_id));
+  }
+
   const result = await db
     .select({
       commodity_id: supplier_commodities.id,
@@ -567,11 +687,13 @@ export const find_nearest_suppliers_commodities = async (limit = 6) => {
       supplier_address: business_entities.default_address,
       supplier_latitude: business_entities.latitude,
       supplier_longitude: business_entities.longitude,
+      supplier_role_id: supplier_commodities.supplier_role_id,
+      supplier_entity_id: business_entities.id,
     })
     .from(supplier_commodities)
     .innerJoin(business_roles, eq(supplier_commodities.supplier_role_id, business_roles.id))
     .innerJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
-    .where(eq(supplier_commodities.is_marketplace_active, true))
+    .where(and(...conditions))
     .orderBy(desc(supplier_commodities.stock))
     .limit(limit);
 
@@ -581,6 +703,8 @@ export const find_nearest_suppliers_commodities = async (limit = 6) => {
     base_price: Number(r.base_price),
     wholesale_unit: r.wholesale_unit,
     supplier_name: r.supplier_name,
+    supplier_role_id: r.supplier_role_id,
+    supplier_entity_id: r.supplier_entity_id,
     seller_city: extract_city_from_address(r.supplier_address),
     distance_km: null,
     stock: Number(r.stock),

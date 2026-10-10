@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, lte, ne, notInArray, sql } from 'drizzle-orm';
 import { db } from '../../config/db.ts';
 import {
   business_entities,
@@ -87,6 +87,18 @@ export const find_waste_listings_with_filter = async (
     conditions.push(ilike(waste_listings.listing_title, `%${filter.search}%`));
   }
 
+  if (filter.exclude_role_id) {
+    conditions.push(ne(waste_listings.seller_role_id, filter.exclude_role_id));
+  }
+
+  if (filter.exclude_role_ids && filter.exclude_role_ids.length > 0) {
+    conditions.push(notInArray(waste_listings.seller_role_id, filter.exclude_role_ids));
+  }
+
+  if (filter.exclude_entity_id) {
+    conditions.push(ne(business_roles.entity_id, filter.exclude_entity_id));
+  }
+
   const where_clause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const records = await db
@@ -94,6 +106,7 @@ export const find_waste_listings_with_filter = async (
       id: waste_listings.id,
       umkm_product_id: waste_listings.umkm_product_id,
       seller_role_id: waste_listings.seller_role_id,
+      seller_entity_id: business_entities.id,
       listing_title: waste_listings.listing_title,
       waste_category: waste_listings.waste_category,
       available_weight: waste_listings.available_weight,

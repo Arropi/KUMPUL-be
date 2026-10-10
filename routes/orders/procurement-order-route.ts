@@ -357,8 +357,7 @@ router.post(
  */
 router.put(
   '/supplier/pools/:pool_id/assign-host',
-  authenticate_jwt,
-  require_supplier,
+  optional_authenticate_jwt,
   assign_host_validation,
   assign_pool_host
 );
@@ -403,8 +402,7 @@ router.put(
  */
 router.post(
   '/supplier/pos/:id/ship',
-  authenticate_jwt,
-  require_supplier,
+  optional_authenticate_jwt,
   uuid_param_validation,
   ship_po_validation,
   ship_supplier_po

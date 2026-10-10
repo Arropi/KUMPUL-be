@@ -4,7 +4,10 @@ import {
   get_marketplace_commodity_detail,
   get_marketplace_recommendations,
 } from '../../controllers/products/marketplace-controller.ts';
-import { authenticate_jwt } from '../../middleware/auth-middleware.ts';
+import {
+  authenticate_jwt,
+  authenticate_optional_jwt,
+} from '../../middleware/auth-middleware.ts';
 import { get_marketplace_catalog_validation } from '../../validations/products/marketplace-validation.ts';
 
 const router = Router();
@@ -63,7 +66,7 @@ const router = Router();
  *       200:
  *         description: Katalog marketplace berhasil diambil
  */
-router.get('/', get_marketplace_catalog_validation, get_marketplace_catalog);
+router.get('/', authenticate_optional_jwt, get_marketplace_catalog_validation, get_marketplace_catalog);
 
 /**
  * @swagger
@@ -79,7 +82,7 @@ router.get('/', get_marketplace_catalog_validation, get_marketplace_catalog);
  *       401:
  *         description: Pengguna belum terautentikasi
  */
-router.get('/recommendations', authenticate_jwt, get_marketplace_recommendations);
+router.get('/recommendations', authenticate_optional_jwt, get_marketplace_recommendations);
 
 /**
  * @swagger

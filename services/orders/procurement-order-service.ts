@@ -434,26 +434,34 @@ export const list_supplier_pos_service = async (
 ) => {
   const records = await find_consolidated_pos_by_supplier(supplier_role_id, limit_count, offset_count);
 
-  return records.map((po) => ({
-    id: po.id,
-    poNumber: `PO-KUMPUL-${po.id.slice(0, 8).toUpperCase()}`,
-    poolId: po.pool_id,
-    commodityId: po.commodity_id,
-    commodityName: po.commodity_name,
-    wholesaleUnit: po.wholesale_unit,
-    totalQuantity: parseFloat(po.total_quantity || '0'),
-    totalWeightKg: parseFloat(po.total_quantity || '0'),
-    grandTotalAmount: parseFloat(po.total_amount),
-    status: po.po_status,
-    primaryDeliveryMethod: 'HEMAT_HUB',
-    hubName: po.hub_name || 'Hub Konsolidasi UMKM',
-    hubAddress: po.hub_address || '-',
-    driverName: po.driver_name,
-    trackingNumber: po.tracking_number,
-    deliveryProofUrl: po.delivery_proof_url,
-    createdAt: po.created_at,
-    estimatedDeliveryDate: po.delivery_date || po.estimated_delivery_date,
-  }));
+  return records.map((po) => {
+    const totalQty = parseFloat(po.total_quantity || '0');
+    const grandTotal = parseFloat(po.total_amount || '0');
+    const lockedPrice = totalQty > 0 ? Math.round(grandTotal / totalQty) : 0;
+
+    return {
+      id: po.id,
+      poNumber: `PO-KUMPUL-${po.id.slice(0, 8).toUpperCase()}`,
+      poolId: po.pool_id,
+      commodityId: po.commodity_id,
+      commodityName: po.commodity_name,
+      wholesaleUnit: po.wholesale_unit,
+      totalQuantity: totalQty,
+      totalWeightKg: totalQty,
+      grandTotalAmount: grandTotal,
+      lockedTierPrice: lockedPrice,
+      status: po.po_status,
+      primaryDeliveryMethod: 'HEMAT_HUB',
+      hubName: po.hub_name || 'Hub Konsolidasi UMKM',
+      hubAddress: po.hub_address || '-',
+      driverName: po.driver_name,
+      trackingNumber: po.tracking_number,
+      deliveryProofUrl: po.delivery_proof_url,
+      createdAt: po.created_at,
+      estimatedDeliveryDate: po.delivery_date || po.estimated_delivery_date,
+      participants: [],
+    };
+  });
 };
 
 export const get_supplier_po_detail_service = async (po_id: string) => {
@@ -493,6 +501,10 @@ export const get_supplier_po_detail_service = async (po_id: string) => {
     isPickedUp: p.is_picked_up,
   }));
 
+  const totalQty = pool ? parseFloat(pool.accumulated_qty) : 0;
+  const grandTotal = parseFloat(po.total_amount || '0');
+  const lockedPrice = totalQty > 0 ? Math.round(grandTotal / totalQty) : 0;
+
   return {
     po: {
       id: po.id,
@@ -501,9 +513,10 @@ export const get_supplier_po_detail_service = async (po_id: string) => {
       commodityId: commodity?.id,
       commodityName: commodity?.name,
       wholesaleUnit: commodity?.wholesale_unit,
-      totalQuantity: pool ? parseFloat(pool.accumulated_qty) : 0,
-      totalWeightKg: pool ? parseFloat(pool.accumulated_qty) : 0,
-      grandTotalAmount: parseFloat(po.total_amount),
+      totalQuantity: totalQty,
+      totalWeightKg: totalQty,
+      grandTotalAmount: grandTotal,
+      lockedTierPrice: lockedPrice,
       status: po.po_status,
       primaryDeliveryMethod: 'HEMAT_HUB',
       hubName: host_participant?.umkm_name || 'Hub Konsolidasi UMKM',
@@ -513,6 +526,7 @@ export const get_supplier_po_detail_service = async (po_id: string) => {
       deliveryProofUrl: po.delivery_proof_url,
       createdAt: po.created_at,
       estimatedDeliveryDate: po.delivery_date,
+      participants: participants,
     },
     pool,
     commodity,
@@ -531,7 +545,7 @@ export const update_supplier_po_status_service = async (
     throw new AppError('Consolidated PO supplier tidak ditemukan', 404, 'PO_NOT_FOUND');
   }
 
-  if (po.po_status !== 'PAID_TO_ESCROW' && po.po_status !== 'SHIPPED') {
+  if (po.po_status !== 'PAID_TO_ESCROW' && po.po_status !== 'SHIPPED' && po.po_status !== 'ISSUED') {
     throw new AppError(
       `PO tidak dapat diubah statusnya ke ${new_status} karena status saat ini ${po.po_status}`,
       400,
