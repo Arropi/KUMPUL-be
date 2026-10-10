@@ -4,14 +4,16 @@ import {
   get_commodity_batch_tag_by_id,
   list_batch_tags_by_commodity_id,
   update_commodity_batch_tag,
+  verify_commodity_batch_tag_with_ai,
   delete_commodity_batch_tag,
-} from '../../controllers/products/commodity-batch-tag-controller';
+  verify_commodity_batch_tag_ai,
+} from '../../controllers/products/commodity-batch-tag-controller.ts';
 import {
   create_commodity_batch_tag_validation,
   update_commodity_batch_tag_validation,
   batch_tag_id_param_validation,
   commodity_batch_tags_by_commodity_validation,
-} from '../../validations/products/commodity-batch-tag-validation';
+} from '../../validations/products/commodity-batch-tag-validation.ts';
 
 const router = Router();
 
@@ -156,6 +158,30 @@ router.put('/:id', update_commodity_batch_tag_validation, update_commodity_batch
 
 /**
  * @swagger
+ * /api/commodity-batch-tags/{id}/verify:
+ *   post:
+ *     summary: Memvalidasi berkas pendukung batch tag menggunakan AI Gemini (kebersihan, legalitas & masa berlaku)
+ *     tags: [CommodityBatchTags]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID UUID dari batch tag yang akan diverifikasi
+ *     responses:
+ *       200:
+ *         description: Verifikasi AI berhasil dijalankan dan status is_verified diperbarui
+ *       400:
+ *         description: Dokumen pendukung tidak ditemukan pada batch tag
+ *       404:
+ *         description: Batch tag tidak ditemukan
+ */
+router.post('/:id/verify', batch_tag_id_param_validation, verify_commodity_batch_tag_with_ai);
+
+/**
+ * @swagger
  * /api/commodity-batch-tags/{id}:
  *   delete:
  *     summary: Menghapus batch tag komoditas berdasarkan ID
@@ -175,5 +201,28 @@ router.put('/:id', update_commodity_batch_tag_validation, update_commodity_batch
  *         description: Batch tag tidak ditemukan
  */
 router.delete('/:id', batch_tag_id_param_validation, delete_commodity_batch_tag);
+
+/**
+ * @swagger
+ * /api/commodity-batch-tags/{id}/verify-ai:
+ *   post:
+ *     summary: Memvalidasi mutu, kebersihan, dan legalitas dokumen batch tag komoditas menggunakan AI Gemini
+ *     description: Memeriksa standar kebersihan (GAP/HACCP), izin legalitas (BPOM/Halal/Karantina), serta masa berlaku dokumen. Jika valid, otomatis mengubah is_verified menjadi true.
+ *     tags: [CommodityBatchTags]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: ID UUID dari batch tag yang ingin diaudit oleh AI
+ *     responses:
+ *       200:
+ *         description: Hasil audit verifikasi AI berhasil diproses
+ *       404:
+ *         description: Batch tag atau komoditas tidak ditemukan
+ */
+router.post('/:id/verify-ai', batch_tag_id_param_validation, verify_commodity_batch_tag_ai);
 
 export default router;

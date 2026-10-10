@@ -5,13 +5,13 @@ import {
   list_recipes_by_product,
   update_recipe,
   delete_recipe,
-} from '../../controllers/products/product-controller';
+} from '../../controllers/products/product-controller.ts';
 import {
   create_recipe_validation,
   update_recipe_validation,
   id_param_validation,
   product_id_param_validation,
-} from '../../validations/products/product-validation';
+} from '../../validations/products/product-validation.ts';
 
 const router = Router({ mergeParams: true });
 

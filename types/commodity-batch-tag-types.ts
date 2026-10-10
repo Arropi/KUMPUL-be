@@ -1,4 +1,5 @@
-import type { CommodityBatchTag, NewCommodityBatchTag } from './database-types';
+import type { CommodityBatchTag, NewCommodityBatchTag } from './database-types.ts';
+import type { DocumentVerificationResult } from './ai-verification-types.ts';
 
 export type StorageTemperatureType = 'AMBIENT' | 'CHILLED' | 'FROZEN';
 
@@ -7,6 +8,8 @@ export interface CreateCommodityBatchTagDTO {
   supporting_file_url?: string | null;
   storage_temperature_type?: StorageTemperatureType;
   is_verified?: boolean;
+  verification_notes?: string | null;
+  verified_at?: Date | null;
 }
 
 export interface UpdateCommodityBatchTagDTO {
@@ -14,6 +17,20 @@ export interface UpdateCommodityBatchTagDTO {
   supporting_file_url?: string | null;
   storage_temperature_type?: StorageTemperatureType;
   is_verified?: boolean;
+  verification_notes?: string | null;
+  verified_at?: Date | null;
+}
+
+export interface QualityVerificationResultDTO {
+  is_verified: boolean;
+  hygiene_assessment: string;
+  legality_assessment: string;
+  expiration_valid: boolean;
+  verification_notes: string;
+}
+
+export interface CommodityBatchTagWithVerification extends CommodityBatchTag {
+  ai_verification?: DocumentVerificationResult | null;
 }
 
 export type CommodityBatchTagRecord = CommodityBatchTag;

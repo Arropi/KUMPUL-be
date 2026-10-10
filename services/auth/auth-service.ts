@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { AppError } from '../../middleware/error-middleware';
+import { AppError } from '../../middleware/error-middleware.ts';
 import {
   find_entity_by_user_id,
   create_default_business_entity,
@@ -8,14 +8,14 @@ import {
   find_active_roles_by_entity_id,
   update_entity_profile,
   find_entity_by_npwp_value,
-} from '../../repositories/auth/auth-repositories';
+} from '../../repositories/auth/auth-repositories.ts';
 import type {
   RegisterUserInputDTO,
   RegisterUserResultDTO,
   LoginUserInputDTO,
   LoginUserResultDTO,
   AuthUserPayload,
-} from '../../types/auth-types';
+} from '../../types/auth-types.ts';
 
 const DEFAULT_JWT_SECRET = 'kumpul_super_secret_jwt_key_2026';
 const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;

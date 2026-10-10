@@ -7,7 +7,10 @@
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
-    "types": ["bun"],
+    // typeRoots wajib eksplisit: builder Vercel (TS 7) menulis tsconfig sementara di /tmp
+    // yang meng-extends file ini, sehingga lookup default node_modules/@types tidak ketemu.
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node"],
 
     // Bundler mode
     "moduleResolution": "bundler",
@@ -26,5 +29,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "tests", "**/*.test.ts"]
 }

@@ -1,5 +1,9 @@
-import type { BusinessRoleRecord, RoleType, SectorType } from './business-role-types';
-import type { BusinessEntityRecord } from './business-entity-types';
+import type {
+  BusinessRoleRecord,
+  BusinessEntityRecord,
+  RoleType,
+  SectorType,
+} from './profile-types.ts';
 
 export interface AuthUserPayload {
   user_id?: string;

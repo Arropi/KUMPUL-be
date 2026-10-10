@@ -1,11 +1,11 @@
-import { eq, desc } from 'drizzle-orm';
-import { db } from '../../config/db';
-import { commodity_batch_tags, supplier_commodities } from '../../config/schema';
+import { eq, desc, inArray } from 'drizzle-orm';
+import { db } from '../../config/db.ts';
+import { commodity_batch_tags, supplier_commodities } from '../../config/schema.ts';
 import type {
   CommodityBatchTagRecord,
   CommodityBatchTagInsertPayload,
-} from '../../types/commodity-batch-tag-types';
-import type { SupplierCommodityRecord } from '../../types/supplier-catalog-types';
+} from '../../types/commodity-batch-tag-types.ts';
+import type { SupplierCommodityRecord } from '../../types/supplier-catalog-types.ts';
 
 export const find_commodity_batch_tag_by_id = async (
   tag_id: string
@@ -29,6 +29,28 @@ export const find_batch_tags_by_commodity_id = async (
     .orderBy(desc(commodity_batch_tags.created_at));
 
   return records;
+};
+
+export const find_batch_tags_by_commodity_ids = async (
+  commodity_ids: string[]
+): Promise<Record<string, CommodityBatchTagRecord[]>> => {
+  if (commodity_ids.length === 0) {
+    return {};
+  }
+  const records = await db
+    .select()
+    .from(commodity_batch_tags)
+    .where(inArray(commodity_batch_tags.commodity_id, commodity_ids))
+    .orderBy(desc(commodity_batch_tags.created_at));
+
+  const tags_by_commodity: Record<string, CommodityBatchTagRecord[]> = {};
+  for (const tag_item of records) {
+    const list = tags_by_commodity[tag_item.commodity_id] ?? [];
+    list.push(tag_item);
+    tags_by_commodity[tag_item.commodity_id] = list;
+  }
+
+  return tags_by_commodity;
 };
 
 export const find_commodity_by_id = async (
@@ -81,4 +103,12 @@ export const delete_commodity_batch_tag_by_id = async (
     .returning();
 
   return deleted_records[0] ?? null;
+};
+
+export const delete_batch_tags_by_commodity_id = async (
+  commodity_id: string
+): Promise<void> => {
+  await db
+    .delete(commodity_batch_tags)
+    .where(eq(commodity_batch_tags.commodity_id, commodity_id));
 };

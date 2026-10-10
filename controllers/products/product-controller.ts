@@ -11,7 +11,7 @@ import {
   list_recipes_by_product_service,
   update_recipe_service,
   delete_recipe_service,
-} from '../../services/products/product-service';
+} from '../../services/products/product-service.ts';
 
 // ==========================================
 // PRODUCT CONTROLLERS

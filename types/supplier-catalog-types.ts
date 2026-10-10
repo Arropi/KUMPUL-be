@@ -3,9 +3,41 @@ import type {
   NewSupplierCommodity,
   CommodityPriceTier,
   NewCommodityPriceTier,
-} from './database-types';
+} from './database-types.ts';
 
-export type WholesaleUnit = 'KARUNG' | 'SAK' | 'KRAT' | 'PAX' | 'BAL';
+export type WholesaleUnit =
+  | 'KARUNG'
+  | 'SAK'
+  | 'KRAT'
+  | 'PAX'
+  | 'BAL'
+  | 'KG'
+  | 'GRAM'
+  | 'TON'
+  | 'KUINTAL'
+  | 'LITER'
+  | 'ML'
+  | 'KUBIK'
+  | 'PCS'
+  | 'PACK'
+  | 'DUS'
+  | 'BOX'
+  | 'KARTON'
+  | 'BOTOL'
+  | 'KALENG'
+  | 'TRAY'
+  | 'KERANJANG'
+  | 'BASKOM'
+  | 'EKOR'
+  | 'BUTIR'
+  | 'LEMBAR'
+  | 'IKAT'
+  | 'PORSI'
+  | 'CUP'
+  | 'BUNGKUS'
+  | 'LUSIN'
+  | 'PALLET'
+  | 'KOLI';
 
 export interface PriceTierInputDTO {
   min_qty: number | string;
@@ -24,6 +56,8 @@ export interface CreateSupplierCommodityDTO {
   image_url?: string | null;
   description?: string | null;
   production_date?: string | null;
+  closed_date?: string | null;
+  reserved_stock?: number | string;
   auto_activate_marketplace?: boolean;
   allows_under_moq?: boolean;
   under_moq_price_per_kg?: number | string | null;
@@ -41,6 +75,8 @@ export interface UpdateSupplierCommodityDTO {
   image_url?: string | null;
   description?: string | null;
   production_date?: string | null;
+  closed_date?: string | null;
+  reserved_stock?: number | string;
   auto_activate_marketplace?: boolean;
   allows_under_moq?: boolean;
   under_moq_price_per_kg?: number | string | null;
@@ -50,6 +86,10 @@ export interface UpdateSupplierCommodityDTO {
 
 export interface SupplierCommodityWithTiers extends SupplierCommodity {
   price_tiers: CommodityPriceTier[];
+  available_stock?: string | number;
+  supplier_entity_id?: string;
+  batch_tag?: any;
+  batch_tags?: any[];
 }
 
 export type SupplierCommodityRecord = SupplierCommodity;

@@ -3,13 +3,14 @@ import type {
   NewPaymentTransaction,
   EscrowTransaction,
   NewEscrowTransaction,
-} from './database-types';
+} from './database-types.ts';
 
 export type EscrowType = 'PROCUREMENT_ESCROW' | 'WASTE_ESCROW';
 export type EscrowStatus = 'HELD' | 'RELEASED' | 'REFUNDED';
 
 export interface InitiatePaymentDTO {
   order_id: string;
+  delivery_method?: 'HEMAT_HUB' | 'DIRECT_DOOR_TO_DOOR';
 }
 
 export interface SnapPaymentResponse {

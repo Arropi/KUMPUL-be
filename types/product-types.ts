@@ -3,7 +3,7 @@ import type {
   NewUmkmProduct,
   RecipeDetail,
   NewRecipeDetail,
-} from './database-types';
+} from './database-types.ts';
 
 export type UnitType =
   | 'KG'

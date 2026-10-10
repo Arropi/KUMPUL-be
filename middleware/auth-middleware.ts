@@ -1,10 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { AppError } from './error-middleware';
-import type { AuthUserPayload } from '../types/auth-types';
-import type { RoleType } from '../types/business-role-types';
-import { find_active_role_by_entity_and_type } from '../repositories/accounts/business-role-repositories';
-import { find_entity_by_auth_user_id } from '../repositories/accounts/business-entity-repositories';
+import { AppError } from './error-middleware.ts';
+import type { AuthUserPayload } from '../types/auth-types.ts';
+import type { RoleType } from '../types/profile-types.ts';
+import {
+  find_active_role_by_entity_and_type,
+  find_entity_by_auth_user_id,
+} from '../repositories/profile/profile-repositories.ts';
 
 const JWT_SECRET = process.env.JWT_SECRET as string
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -13,7 +15,14 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-
  * Helper untuk mengekstrak dan memverifikasi token JWT dari header Authorization.
  */
 const extract_and_verify_token = (req: Request): AuthUserPayload => {
-  const authorization_header = req.headers.authorization;
+  let authorization_header = req.headers.authorization;
+  if (!authorization_header && req.headers.cookie) {
+    const match = req.headers.cookie.match(/(?:^|;\s*)kumpul_token=([^;]+)/);
+    if (match && match[1]) {
+      authorization_header = `Bearer ${decodeURIComponent(match[1])}`;
+    }
+  }
+
   if (!authorization_header) {
     throw new AppError(
       'Token otorisasi tidak ditemukan pada header Authorization',
@@ -155,6 +164,26 @@ export const authenticate_jwt = (
 };
 
 /**
+ * Middleware Autentikasi Opsional (JWT):
+ * Jika token disediakan dan valid, simpan ke req.user.
+ * Jika token tidak ada atau tidak valid, izinkan request lanjut sebagai anonim/guest.
+ */
+export const authenticate_optional_jwt = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  try {
+    const decoded_user = extract_and_verify_token(req);
+    req.user = decoded_user;
+    next();
+  } catch {
+    req.user = undefined;
+    next();
+  }
+};
+
+/**
  * 2. Middleware Validasi Role UMKM:
  * Memastikan pengguna yang terautentikasi memiliki role aktif UMKM.
  */
@@ -235,3 +264,18 @@ export const auth_middleware = authenticate_jwt;
 export const verify_token = authenticate_jwt;
 export const is_umkm_middleware = require_umkm;
 export const is_supplier_middleware = require_supplier;
+
+export const optional_authenticate_jwt = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  if (req.headers.authorization) {
+    try {
+      req.user = extract_and_verify_token(req);
+    } catch {
+      // Ignore in optional mode
+    }
+  }
+  next();
+};

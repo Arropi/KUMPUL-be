@@ -4,12 +4,14 @@ import {
   handle_midtrans_webhook,
   check_payment_status,
   release_escrow_funds,
-} from '../../controllers/payments/payment-controller';
+  evaluate_expired_orders,
+  simulate_sandbox_payment,
+} from '../../controllers/payments/payment-controller.ts';
 import {
   initiate_payment_validation,
   midtrans_notification_validation,
   release_escrow_validation,
-} from '../../validations/payments/payment-validation';
+} from '../../validations/payments/payment-validation.ts';
 
 const router = Router();
 
@@ -32,6 +34,11 @@ const router = Router();
  *                 type: string
  *                 format: uuid
  *                 example: "11111111-1111-1111-1111-111111111111"
+ *               delivery_method:
+ *                 type: string
+ *                 enum: [HEMAT_HUB, DIRECT_DOOR_TO_DOOR]
+ *                 description: Pemilihan metode pengiriman saat checkout pembayaran (opsional jika sudah dipilih saat join)
+ *                 example: "HEMAT_HUB"
  *     responses:
  *       201:
  *         description: Snap token dan redirect URL berhasil dibuat
@@ -138,5 +145,18 @@ router.get('/status/:order_id', check_payment_status);
  *         description: Rekening bersama tidak ditemukan
  */
 router.post('/escrow/release', release_escrow_validation, release_escrow_funds);
+
+/**
+ * @swagger
+ * /api/payments/evaluate-expired:
+ *   post:
+ *     summary: Mengevaluasi dan membatalkan pesanan pengadaan yang melewati batas waktu pembayaran 12 jam
+ *     tags: [Payments]
+ *     responses:
+ *       200:
+ *         description: Evaluasi berhasil dijalankan
+ */
+router.post('/evaluate-expired', evaluate_expired_orders);
+router.post('/simulate-sandbox-pay', simulate_sandbox_payment);
 
 export default router;

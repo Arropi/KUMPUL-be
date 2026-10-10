@@ -2,8 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import {
   register_user_role_service,
   login_user_service,
-} from '../../services/auth/auth-service';
-import type { RoleType, SectorType } from '../../types/business-role-types';
+} from '../../services/auth/auth-service.ts';
+import type { RoleType, SectorType } from '../../types/profile-types.ts';
 
 export const register_user_role = async (
   req: Request,

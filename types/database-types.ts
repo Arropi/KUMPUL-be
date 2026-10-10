@@ -35,4 +35,6 @@ export type {
   NewWasteTransaction,
   OfftakerReferralLog,
   NewOfftakerReferralLog,
-} from '../config/schema';
+  UmkmInventoryStock,
+  NewUmkmInventoryStock,
+} from '../config/schema.ts';

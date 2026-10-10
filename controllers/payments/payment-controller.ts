@@ -4,7 +4,8 @@ import {
   handle_midtrans_webhook_service,
   check_and_sync_payment_status_service,
   release_escrow_funds_service,
-} from '../../services/payments/payment-service';
+  evaluate_expired_orders_service,
+} from '../../services/payments/payment-service.ts';
 
 export const initiate_order_payment = async (
   req: Request,
@@ -13,7 +14,8 @@ export const initiate_order_payment = async (
 ): Promise<void> => {
   try {
     const order_id = req.body.order_id as string;
-    const snap_data = await initiate_order_payment_service(order_id);
+    const delivery_method = req.body.delivery_method as 'HEMAT_HUB' | 'DIRECT_DOOR_TO_DOOR' | undefined;
+    const snap_data = await initiate_order_payment_service(order_id, delivery_method);
 
     res.status(201).json({
       status: 'success',
@@ -80,6 +82,44 @@ export const release_escrow_funds = async (
       status: 'success',
       message: 'Dana escrow berhasil diteruskan ke Supplier',
       data: released_escrow,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const evaluate_expired_orders = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const result = await evaluate_expired_orders_service();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Evaluasi pesanan kedaluwarsa berhasil dijalankan',
+      data: result,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const simulate_sandbox_payment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const order_id = req.body.order_id as string;
+    const { simulate_sandbox_payment_service } = await import('../../services/payments/payment-service.ts');
+    const result = await simulate_sandbox_payment_service(order_id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Simulasi pembayaran Sandbox berhasil diselesaikan (Settled)',
+      data: result,
     });
   } catch (controller_error) {
     next(controller_error);

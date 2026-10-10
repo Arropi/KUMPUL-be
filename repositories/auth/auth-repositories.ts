@@ -1,16 +1,14 @@
 import { eq, or, and, isNull } from 'drizzle-orm';
-import { db } from '../../config/db';
-import { business_entities, business_roles } from '../../config/schema';
+import { db } from '../../config/db.ts';
+import { business_entities, business_roles } from '../../config/schema.ts';
 import type {
   BusinessEntityRecord,
   BusinessEntityInsertPayload,
-} from '../../types/business-entity-types';
-import type {
   BusinessRoleRecord,
   BusinessRoleInsertPayload,
   RoleType,
   SectorType,
-} from '../../types/business-role-types';
+} from '../../types/profile-types.ts';
 
 export const find_entity_by_user_id = async (
   user_id: string
