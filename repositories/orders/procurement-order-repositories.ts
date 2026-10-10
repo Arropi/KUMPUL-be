@@ -52,6 +52,8 @@ export const find_order_with_details_by_id = async (order_id: string) => {
         wholesale_unit: supplier_commodities.wholesale_unit,
         base_price: supplier_commodities.base_price,
         lead_time_days: supplier_commodities.lead_time_days,
+        stock: supplier_commodities.stock,
+        reserved_stock: supplier_commodities.reserved_stock,
       },
     })
     .from(umkm_procurement_orders)

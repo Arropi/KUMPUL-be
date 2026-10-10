@@ -30,6 +30,7 @@ import {
   check_midtrans_transaction_status,
 } from './midtrans-service.ts';
 import { calculate_allocated_shipping } from '../orders/pre-order-service.ts';
+import { deduct_commodity_stock_on_order_fulfillment } from '../orders/procurement-order-service.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
 import type {
   SnapPaymentResponse,
@@ -251,6 +252,9 @@ export const handle_midtrans_webhook_service = async (
         await update_consolidated_po_status(consolidated_po.id, 'PAID_TO_ESCROW');
       }
     }
+
+    // Kurangi stok komoditas supplier (idempotent)
+    await deduct_commodity_stock_on_order_fulfillment(order_id);
   } else if (['deny', 'cancel', 'expire'].includes(status)) {
     await update_order_payment_status(order_id, 'PENDING');
   } else if (status === 'refund') {
@@ -301,6 +305,9 @@ export const check_and_sync_payment_status_service = async (
         escrow_status: 'HELD',
       });
     }
+
+    // Kurangi stok komoditas supplier (idempotent)
+    await deduct_commodity_stock_on_order_fulfillment(order_id);
   }
 
   await update_payment_transaction(latest_tx.midtrans_order_id, {
@@ -402,6 +409,9 @@ export const simulate_sandbox_payment_service = async (order_id: string) => {
       await update_consolidated_po_status(consolidated_po.id, 'PAID_TO_ESCROW');
     }
   }
+
+  // Kurangi stok komoditas supplier (idempotent)
+  await deduct_commodity_stock_on_order_fulfillment(order_id);
 
   return {
     order_id,

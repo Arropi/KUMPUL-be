@@ -86,6 +86,7 @@ export interface UpdateSupplierCommodityDTO {
 
 export interface SupplierCommodityWithTiers extends SupplierCommodity {
   price_tiers: CommodityPriceTier[];
+  available_stock?: string | number;
   supplier_entity_id?: string;
   batch_tag?: any;
   batch_tags?: any[];

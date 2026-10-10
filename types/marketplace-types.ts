@@ -140,6 +140,11 @@ export interface SupplierRecommendationResponse {
     your_base_price: number;
     market_average_price: number;
     price_competitiveness: 'COMPETITIVE' | 'AVERAGE' | 'EXPENSIVE';
+    image_url?: string | null;
+    sku?: string | null;
+    wholesale_unit?: string | null;
+    base_moq?: number | null;
+    stock?: number | null;
   }[];
   high_demand_ingredients: {
     ingredient_name: string;
