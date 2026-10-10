@@ -163,7 +163,7 @@ export const get_marketplace_recommendations_service = async (
   }
 
   // SUPPLIER Recommendation Engine: Tetap sediakan rekomendasi bursa dari supplier lain
-  const price_benchmarks = role_id ? await find_market_price_benchmarks(role_id, entity_id) : [];
+  const price_benchmarks = role_id ? await find_market_price_benchmarks(role_id, entity_id, role_ids) : [];
 
   const supplier_response: SupplierRecommendationResponse = {
     price_benchmarks,
