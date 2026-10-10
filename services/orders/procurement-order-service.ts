@@ -553,27 +553,48 @@ export const list_supplier_pos_service = async (
     const totalQty = parseFloat(po.total_quantity || '0');
     const grandTotal = parseFloat(po.total_amount || '0');
     const lockedPrice = totalQty > 0 ? Math.round(grandTotal / totalQty) : 0;
+    const rawPo = po as any;
+    const poNum = rawPo.po_number || `PO-KUMPUL-${po.id.slice(0, 8).toUpperCase()}`;
 
     return {
       id: po.id,
-      poNumber: `PO-KUMPUL-${po.id.slice(0, 8).toUpperCase()}`,
+      poNumber: poNum,
+      po_number: poNum,
       poolId: po.pool_id,
+      pool_id: po.pool_id,
       commodityId: po.commodity_id,
+      commodity_id: po.commodity_id,
       commodityName: po.commodity_name,
+      commodity_name: po.commodity_name,
       wholesaleUnit: po.wholesale_unit,
+      wholesale_unit: po.wholesale_unit,
       totalQuantity: totalQty,
+      total_quantity: totalQty,
       totalWeightKg: totalQty,
+      total_weight_kg: totalQty,
       grandTotalAmount: grandTotal,
+      grand_total_amount: grandTotal,
+      total_amount: grandTotal.toString(),
       lockedTierPrice: lockedPrice,
+      locked_tier_price: lockedPrice,
       status: po.po_status,
-      primaryDeliveryMethod: 'HEMAT_HUB',
+      po_status: po.po_status,
+      primaryDeliveryMethod: rawPo.delivery_method || 'HEMAT_HUB',
+      delivery_method: rawPo.delivery_method || 'HEMAT_HUB',
       hubName: po.hub_name || 'Hub Konsolidasi UMKM',
+      hub_name: po.hub_name || 'Hub Konsolidasi UMKM',
       hubAddress: po.hub_address || '-',
+      hub_address: po.hub_address || '-',
       driverName: po.driver_name,
+      driver_name: po.driver_name,
       trackingNumber: po.tracking_number,
+      tracking_number: po.tracking_number,
       deliveryProofUrl: po.delivery_proof_url,
+      delivery_proof_url: po.delivery_proof_url,
       createdAt: po.created_at,
+      created_at: po.created_at,
       estimatedDeliveryDate: po.delivery_date || po.estimated_delivery_date,
+      delivery_date: po.delivery_date || po.estimated_delivery_date,
       participants: [],
     };
   });
@@ -599,21 +620,30 @@ export const get_supplier_po_detail_service = async (po_id: string) => {
   const participants = raw_participants.map((p) => ({
     id: p.id,
     umkmRoleId: p.umkm_role_id,
+    umkm_role_id: p.umkm_role_id,
     umkmName: p.umkm_name || 'UMKM Anggota',
+    umkm_name: p.umkm_name || 'UMKM Anggota',
     ownerName: p.umkm_name || 'Pemilik Usaha',
     phone: p.phone_number || '-',
+    phone_number: p.phone_number || '-',
     orderQtyUnit: parseFloat(p.order_qty),
+    order_qty: parseFloat(p.order_qty),
     orderWeightKg: parseFloat(p.order_qty),
     deliveryMethod: p.delivery_method || 'HEMAT_HUB',
+    delivery_method: p.delivery_method || 'HEMAT_HUB',
     destinationAddress: p.final_delivery_address,
+    final_delivery_address: p.final_delivery_address,
     allocatedShippingFee: parseFloat(p.allocated_shipping_fee || '0'),
+    allocated_shipping_fee: parseFloat(p.allocated_shipping_fee || '0'),
     subtotalAmount:
       (parseFloat(p.order_qty) * parseFloat(po.total_amount)) /
       Math.max(1, parseFloat(pool?.accumulated_qty || '1')),
     storageCapacity: p.storage_capacity ?? 0,
     isHost: p.umkm_role_id === pool?.host_umkm_role_id,
     pickupCode: p.pickup_code || `KMPL-${p.id.slice(0, 4).toUpperCase()}`,
+    pickup_code: p.pickup_code || `KMPL-${p.id.slice(0, 4).toUpperCase()}`,
     isPickedUp: p.is_picked_up,
+    is_picked_up: p.is_picked_up,
   }));
 
   const totalQty = pool ? parseFloat(pool.accumulated_qty) : 0;
