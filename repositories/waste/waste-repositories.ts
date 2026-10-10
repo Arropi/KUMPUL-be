@@ -85,16 +85,20 @@ export const find_waste_listings_with_filter = async (
     conditions.push(ilike(waste_listings.listing_title, `%${filter.search}%`));
   }
 
-  if (filter.exclude_role_id) {
-    conditions.push(ne(waste_listings.seller_role_id, filter.exclude_role_id));
-  }
+  if (filter.seller_entity_id) {
+    conditions.push(eq(business_roles.entity_id, filter.seller_entity_id));
+  } else {
+    if (filter.exclude_role_id) {
+      conditions.push(ne(waste_listings.seller_role_id, filter.exclude_role_id));
+    }
 
-  if (filter.exclude_role_ids && filter.exclude_role_ids.length > 0) {
-    conditions.push(notInArray(waste_listings.seller_role_id, filter.exclude_role_ids));
-  }
+    if (filter.exclude_role_ids && filter.exclude_role_ids.length > 0) {
+      conditions.push(notInArray(waste_listings.seller_role_id, filter.exclude_role_ids));
+    }
 
-  if (filter.exclude_entity_id) {
-    conditions.push(ne(business_roles.entity_id, filter.exclude_entity_id));
+    if (filter.exclude_entity_id) {
+      conditions.push(ne(business_roles.entity_id, filter.exclude_entity_id));
+    }
   }
 
   const where_clause = conditions.length > 0 ? and(...conditions) : undefined;
