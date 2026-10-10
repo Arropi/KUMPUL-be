@@ -48,11 +48,18 @@ export interface CreateProcurementOrderDTO {
   shipping_fee?: number | string;
 }
 
+export interface PoolParticipantWithUmkm extends PoolParticipant {
+  umkm_name?: string | null;
+  entity_address?: string | null;
+  storage_capacity?: number | null;
+  phone_number?: string | null;
+}
+
 // Detail Response
 export interface PoolWithParticipants extends ProcurementPool {
   commodity_name?: string;
   wholesale_unit?: string;
-  participants: PoolParticipant[];
+  participants: PoolParticipantWithUmkm[];
   consolidated_po?: ConsolidatedPO | null;
 }
 

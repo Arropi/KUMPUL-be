@@ -78,7 +78,10 @@ export const initiate_order_payment_service = async (
     }
   }
 
-  const gross_amount_num = Math.round(current_grand_total);
+  const raw_subtotal_num = Math.round(parseFloat(order_data.order.raw_material_subtotal));
+  const shipping_fee_num = Math.round(current_shipping_fee);
+  const gross_amount_num = raw_subtotal_num + shipping_fee_num;
+
   if (gross_amount_num <= 0) {
     throw new AppError('Nominal pesanan harus lebih besar dari 0', 400, 'INVALID_AMOUNT');
   }
@@ -86,21 +89,25 @@ export const initiate_order_payment_service = async (
   const midtrans_order_id = `KMPL-ORD-${order_id.slice(0, 8)}-${Date.now()}`;
   const payment_deadline = new Date(Date.now() + 12 * 60 * 60 * 1000);
 
+  const clean_commodity_name = (order_data.commodity.name || 'Bahan Baku')
+    .slice(0, 40)
+    .replace(/[^\w\s-]/g, '');
+
   const item_details = [
     {
-      id: order_data.commodity.id,
-      price: Math.round(parseFloat(order_data.order.raw_material_subtotal) / parseFloat(order_data.participant.order_qty)),
-      quantity: Math.round(parseFloat(order_data.participant.order_qty)),
-      name: order_data.commodity.name.slice(0, 50),
+      id: `ITEM-${order_data.commodity.id.slice(0, 8)}`,
+      price: raw_subtotal_num,
+      quantity: 1,
+      name: `${clean_commodity_name} (${order_data.participant.order_qty} ${order_data.commodity.wholesale_unit || 'Unit'})`.slice(0, 50),
     },
   ];
 
-  if (current_shipping_fee > 0) {
+  if (shipping_fee_num > 0) {
     item_details.push({
       id: 'SHIPPING-FEE',
-      price: Math.round(current_shipping_fee),
+      price: shipping_fee_num,
       quantity: 1,
-      name: `Ongkos Kirim (${order_data.participant.delivery_method ?? 'Standar'})`,
+      name: `Ongkos Kirim (${effective_delivery_method === 'HEMAT_HUB' ? 'Hemat Hub' : 'Direct Door'})`.slice(0, 50),
     });
   }
 
@@ -361,5 +368,44 @@ export const evaluate_expired_orders_service = async () => {
     evaluated_count: pending_orders.length,
     cancelled_count: cancelled_orders.length,
     cancelled_orders,
+  };
+};
+
+export const simulate_sandbox_payment_service = async (order_id: string) => {
+  const order_data = await find_order_with_details_by_id(order_id);
+  if (!order_data) {
+    throw new AppError('Pesanan pengadaan tidak ditemukan', 404, 'ORDER_NOT_FOUND');
+  }
+
+  const settlement_date = new Date();
+
+  await update_order_payment_status(
+    order_id,
+    'SETTLED',
+    settlement_date,
+    'sandbox_simulator'
+  );
+
+  const existing_escrow = await find_escrow_by_order_reference_id(order_id);
+  if (!existing_escrow) {
+    await insert_escrow_transaction({
+      transaction_type: 'PROCUREMENT_ESCROW',
+      order_reference_id: order_id,
+      amount: order_data.order.grand_total,
+      escrow_status: 'HELD',
+    });
+  }
+
+  if (order_data.pool?.id) {
+    const consolidated_po = await find_consolidated_po_by_pool_id(order_data.pool.id);
+    if (consolidated_po && consolidated_po.po_status === 'ISSUED') {
+      await update_consolidated_po_status(consolidated_po.id, 'PAID_TO_ESCROW');
+    }
+  }
+
+  return {
+    order_id,
+    payment_status: 'SETTLED',
+    settlement_time: settlement_date.toISOString(),
   };
 };

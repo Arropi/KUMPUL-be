@@ -5,8 +5,16 @@ import type { PriceTierInputDTO } from '../types/supplier-catalog-types.ts';
  * Validasi dan konversi tier harga komoditas grosir
  */
 export const format_and_validate_price_tiers = (
-  raw_tiers: PriceTierInputDTO[]
+  raw_tiers: PriceTierInputDTO[],
+  base_price?: number | string
 ): { min_qty: string; max_qty: string; tier_price: string }[] => {
+  const numeric_base_price =
+    base_price !== undefined
+      ? typeof base_price === 'number'
+        ? base_price
+        : parseFloat(String(base_price))
+      : undefined;
+
   return raw_tiers.map((tier_item, tier_index) => {
     const min_numeric =
       typeof tier_item.min_qty === 'number'
@@ -47,6 +55,19 @@ export const format_and_validate_price_tiers = (
         `Tier index ${tier_index}: tier_price harus bernilai angka lebih besar dari 0`,
         400,
         'INVALID_TIER_PRICE'
+      );
+    }
+
+    if (
+      numeric_base_price !== undefined &&
+      !isNaN(numeric_base_price) &&
+      numeric_base_price > 0 &&
+      price_numeric > numeric_base_price
+    ) {
+      throw new AppError(
+        `Tier index ${tier_index}: tier_price (${price_numeric}) tidak boleh melebihi harga utama komoditas (${numeric_base_price})`,
+        400,
+        'TIER_PRICE_EXCEEDS_BASE_PRICE'
       );
     }
 

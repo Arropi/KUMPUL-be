@@ -30,12 +30,14 @@ describe('End-to-End Flow: Catalog Creation -> Quality/Mutu -> Publish -> PO Sys
         legal_name: `PT Petani Unggul ${test_suffix}`,
         npwp_nib: `8877665544${test_suffix}`,
         default_address: 'Jl. Agro Pertanian Sleman KM 15',
+        phone_number: '081234567890',
         latitude: '-7.7050',
         longitude: '110.4120',
         bank_account_info: {
           bank_name: 'BCA',
           account_number: '1122334455',
           account_holder: 'PT Petani Unggul',
+          phone: '081234567890',
         },
       })
       .returning();

@@ -2,10 +2,12 @@ import { AppError } from '../../middleware/error-middleware.ts';
 import {
   find_active_pools_with_details,
   find_available_waste_listings_for_recommendation,
+  find_healthy_verified_commodities,
   find_market_price_benchmarks,
   find_marketplace_commodities,
   find_marketplace_commodity_by_id,
   find_matching_commodities_by_names,
+  find_nearest_suppliers_commodities,
   find_popular_recipe_ingredients,
   find_umkm_low_stock_records,
 } from '../../repositories/products/marketplace-repositories.ts';
@@ -69,7 +71,14 @@ export const get_marketplace_recommendations_service = async (
       };
     });
 
-    const waste_listings = await find_available_waste_listings_for_recommendation(6);
+    const [healthy_verified_alternatives, nearest_suppliers, waste_listings, active_pools] =
+      await Promise.all([
+        find_healthy_verified_commodities(6),
+        find_nearest_suppliers_commodities(6),
+        find_available_waste_listings_for_recommendation(6),
+        find_active_pools_with_details(),
+      ]);
+
     const circular_waste_matches = waste_listings.map((w) => ({
       listing_id: w.id,
       listing_title: w.listing_title,
@@ -80,7 +89,6 @@ export const get_marketplace_recommendations_service = async (
       distance_km: null,
     }));
 
-    const active_pools = await find_active_pools_with_details();
     const cost_saving_active_pools = active_pools.map((p) => {
       const base = Number(p.base_price);
       const locked = p.locked_tier_price ? Number(p.locked_tier_price) : base;
@@ -100,6 +108,8 @@ export const get_marketplace_recommendations_service = async (
 
     const umkm_response: UMKMRecommendationResponse = {
       low_stock_recommendations,
+      healthy_verified_alternatives,
+      nearest_suppliers,
       circular_waste_matches,
       cost_saving_active_pools,
     };

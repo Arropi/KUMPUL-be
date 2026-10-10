@@ -1,11 +1,14 @@
 import { eq, desc } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { db } from '../../config/db.ts';
 import {
   umkm_procurement_orders,
   pool_participants,
   procurement_pools,
   supplier_commodities,
+  consolidated_pos,
   business_roles,
+  business_entities,
 } from '../../config/schema.ts';
 import type {
   UmkmProcurementOrderRecord,
@@ -224,6 +227,11 @@ export const find_expired_pending_procurement_orders = async () => {
 };
 
 export const find_all_orders_for_umkm = async (umkm_role_id: string) => {
+  const host_roles = alias(business_roles, 'host_roles');
+  const host_entities = alias(business_entities, 'host_entities');
+  const supplier_roles = alias(business_roles, 'supplier_roles');
+  const supplier_entities = alias(business_entities, 'supplier_entities');
+
   return await db
     .select({
       order_id: umkm_procurement_orders.id,
@@ -236,6 +244,8 @@ export const find_all_orders_for_umkm = async (umkm_role_id: string) => {
       payment_deadline: umkm_procurement_orders.payment_deadline,
       snap_token: umkm_procurement_orders.snap_token,
       snap_redirect_url: umkm_procurement_orders.snap_redirect_url,
+      settlement_time: umkm_procurement_orders.settlement_time,
+      payment_method: umkm_procurement_orders.payment_method,
       delivery_method: pool_participants.delivery_method,
       required_delivery_date: pool_participants.required_delivery_date,
       pickup_code: pool_participants.pickup_code,
@@ -244,11 +254,30 @@ export const find_all_orders_for_umkm = async (umkm_role_id: string) => {
       final_delivery_address: pool_participants.final_delivery_address,
       pool_id: procurement_pools.id,
       pool_status: procurement_pools.pool_status,
+      target_moq: procurement_pools.target_moq,
+      accumulated_qty: procurement_pools.accumulated_qty,
       target_delivery_date: procurement_pools.target_delivery_date,
+      cutoff_date: procurement_pools.cutoff_date,
+      is_direct_order: procurement_pools.is_direct_order,
+      host_umkm_role_id: procurement_pools.host_umkm_role_id,
+      default_hub_address: procurement_pools.default_hub_address,
       commodity_id: supplier_commodities.id,
       commodity_name: supplier_commodities.name,
+      wholesale_unit: supplier_commodities.wholesale_unit,
+      base_price: supplier_commodities.base_price,
+      image_url: supplier_commodities.image_url,
       lead_time_days: supplier_commodities.lead_time_days,
       supplier_role_id: supplier_commodities.supplier_role_id,
+      po_id: consolidated_pos.id,
+      po_status: consolidated_pos.po_status,
+      driver_name: consolidated_pos.driver_name,
+      tracking_number: consolidated_pos.tracking_number,
+      delivery_proof_url: consolidated_pos.delivery_proof_url,
+      host_name: host_entities.legal_name,
+      host_phone: host_entities.phone_number,
+      host_address: host_entities.default_address,
+      supplier_name: supplier_entities.legal_name,
+      supplier_phone: supplier_entities.phone_number,
       created_at: umkm_procurement_orders.created_at,
     })
     .from(umkm_procurement_orders)
@@ -263,6 +292,26 @@ export const find_all_orders_for_umkm = async (umkm_role_id: string) => {
     .innerJoin(
       supplier_commodities,
       eq(procurement_pools.commodity_id, supplier_commodities.id)
+    )
+    .leftJoin(
+      consolidated_pos,
+      eq(procurement_pools.id, consolidated_pos.pool_id)
+    )
+    .leftJoin(
+      host_roles,
+      eq(procurement_pools.host_umkm_role_id, host_roles.id)
+    )
+    .leftJoin(
+      host_entities,
+      eq(host_roles.entity_id, host_entities.id)
+    )
+    .leftJoin(
+      supplier_roles,
+      eq(supplier_commodities.supplier_role_id, supplier_roles.id)
+    )
+    .leftJoin(
+      supplier_entities,
+      eq(supplier_roles.entity_id, supplier_entities.id)
     )
     .where(eq(pool_participants.umkm_role_id, umkm_role_id))
     .orderBy(desc(umkm_procurement_orders.created_at));

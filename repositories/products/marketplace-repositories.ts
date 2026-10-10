@@ -14,6 +14,16 @@ import {
 } from '../../config/schema.ts';
 import type { MarketplaceFilterDTO } from '../../types/marketplace-types.ts';
 
+function extract_city_from_address(address?: string | null): string {
+  if (!address) return 'Sentra Distribusi';
+  const parts = address.split(',').map((p) => p.trim());
+  if (parts.length >= 2) {
+    const candidate = parts[parts.length - 2] ?? parts[parts.length - 1];
+    if (candidate) return candidate;
+  }
+  return parts[0] ?? 'Sentra Distribusi';
+}
+
 export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO) => {
   const page = filter.page && filter.page > 0 ? filter.page : 1;
   const limit = filter.limit && filter.limit > 0 ? filter.limit : 20;
@@ -25,7 +35,8 @@ export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO)
     conditions.push(
       or(
         ilike(supplier_commodities.name, `%${filter.search}%`),
-        ilike(supplier_commodities.description, `%${filter.search}%`)
+        ilike(supplier_commodities.description, `%${filter.search}%`),
+        ilike(supplier_commodities.sku, `%${filter.search}%`)
       )!
     );
   }
@@ -146,6 +157,7 @@ export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO)
     const stock_num = Number(c.stock);
     const reserved_num = Number(c.reserved_stock);
     const available_stock = Math.max(0, stock_num - reserved_num);
+    const seller_city = extract_city_from_address(c.supplier_address);
 
     return {
       id: c.id,
@@ -183,6 +195,13 @@ export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO)
           }
         : null,
       active_pools: pools,
+      has_tiering_price: tiers.length > 1,
+      has_open_pools: pools.length > 0,
+      open_pools_count: pools.length,
+      is_verified: Boolean(c.is_batch_verified),
+      source_type: 'SUPPLIER' as const,
+      seller_city,
+      distance_km: null,
     };
   });
 };
@@ -309,6 +328,13 @@ export const find_marketplace_commodity_by_id = async (commodity_id: string) => 
         cutoff_date: p.cutoff_date,
       };
     }),
+    has_tiering_price: tiers_data.length > 1,
+    has_open_pools: pools_data.length > 0,
+    open_pools_count: pools_data.length,
+    is_verified: Boolean(c.is_batch_verified),
+    source_type: 'SUPPLIER' as const,
+    seller_city: extract_city_from_address(c.supplier_address),
+    distance_km: null,
   };
 };
 
@@ -481,5 +507,83 @@ export const find_popular_recipe_ingredients = async (limit = 10) => {
   return result.map((r) => ({
     ingredient_name: r.ingredient_name,
     recipe_occurrences: r.occurrences,
+  }));
+};
+
+export const find_healthy_verified_commodities = async (limit = 6) => {
+  const result = await db
+    .select({
+      commodity_id: supplier_commodities.id,
+      commodity_name: supplier_commodities.name,
+      base_price: supplier_commodities.base_price,
+      wholesale_unit: supplier_commodities.wholesale_unit,
+      image_url: supplier_commodities.image_url,
+      supplier_name: business_entities.legal_name,
+      supplier_address: business_entities.default_address,
+      storage_temp: commodity_batch_tags.storage_temperature_type,
+      is_verified: commodity_batch_tags.is_verified,
+      verification_notes: commodity_batch_tags.verification_notes,
+    })
+    .from(supplier_commodities)
+    .innerJoin(business_roles, eq(supplier_commodities.supplier_role_id, business_roles.id))
+    .innerJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
+    .innerJoin(
+      commodity_batch_tags,
+      eq(supplier_commodities.id, commodity_batch_tags.commodity_id)
+    )
+    .where(
+      and(
+        eq(supplier_commodities.is_marketplace_active, true),
+        eq(commodity_batch_tags.is_verified, true)
+      )
+    )
+    .orderBy(desc(commodity_batch_tags.created_at))
+    .limit(limit);
+
+  return result.map((r) => ({
+    commodity_id: r.commodity_id,
+    commodity_name: r.commodity_name,
+    base_price: Number(r.base_price),
+    wholesale_unit: r.wholesale_unit,
+    supplier_name: r.supplier_name,
+    seller_city: extract_city_from_address(r.supplier_address),
+    storage_temp: r.storage_temp,
+    is_verified: Boolean(r.is_verified),
+    verification_notes: r.verification_notes,
+    image_url: r.image_url,
+  }));
+};
+
+export const find_nearest_suppliers_commodities = async (limit = 6) => {
+  const result = await db
+    .select({
+      commodity_id: supplier_commodities.id,
+      commodity_name: supplier_commodities.name,
+      base_price: supplier_commodities.base_price,
+      wholesale_unit: supplier_commodities.wholesale_unit,
+      stock: supplier_commodities.stock,
+      image_url: supplier_commodities.image_url,
+      supplier_name: business_entities.legal_name,
+      supplier_address: business_entities.default_address,
+      supplier_latitude: business_entities.latitude,
+      supplier_longitude: business_entities.longitude,
+    })
+    .from(supplier_commodities)
+    .innerJoin(business_roles, eq(supplier_commodities.supplier_role_id, business_roles.id))
+    .innerJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
+    .where(eq(supplier_commodities.is_marketplace_active, true))
+    .orderBy(desc(supplier_commodities.stock))
+    .limit(limit);
+
+  return result.map((r) => ({
+    commodity_id: r.commodity_id,
+    commodity_name: r.commodity_name,
+    base_price: Number(r.base_price),
+    wholesale_unit: r.wholesale_unit,
+    supplier_name: r.supplier_name,
+    seller_city: extract_city_from_address(r.supplier_address),
+    distance_km: null,
+    stock: Number(r.stock),
+    image_url: r.image_url,
   }));
 };

@@ -5,6 +5,7 @@ import {
   check_payment_status,
   release_escrow_funds,
   evaluate_expired_orders,
+  simulate_sandbox_payment,
 } from '../../controllers/payments/payment-controller.ts';
 import {
   initiate_payment_validation,
@@ -156,5 +157,6 @@ router.post('/escrow/release', release_escrow_validation, release_escrow_funds);
  *         description: Evaluasi berhasil dijalankan
  */
 router.post('/evaluate-expired', evaluate_expired_orders);
+router.post('/simulate-sandbox-pay', simulate_sandbox_payment);
 
 export default router;

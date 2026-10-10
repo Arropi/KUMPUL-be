@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { upload_file_controller } from '../../controllers/storage/storage-controller.ts';
+import { upload_file_controller, delete_file_controller } from '../../controllers/storage/storage-controller.ts';
 
 const storage_router = Router();
 
@@ -60,5 +60,9 @@ const flexible_file_upload = (req: any, res: any, next: any) => {
 storage_router.post('/', flexible_file_upload, upload_file_controller);
 storage_router.post('/image', flexible_file_upload, upload_file_controller);
 storage_router.post('/file', flexible_file_upload, upload_file_controller);
+
+// Endpoint penghapusan file Supabase Storage (rollback / pembersihan data orphan)
+storage_router.delete('/', delete_file_controller);
+storage_router.post('/delete', delete_file_controller);
 
 export default storage_router;

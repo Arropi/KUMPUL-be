@@ -237,3 +237,18 @@ export const auth_middleware = authenticate_jwt;
 export const verify_token = authenticate_jwt;
 export const is_umkm_middleware = require_umkm;
 export const is_supplier_middleware = require_supplier;
+
+export const optional_authenticate_jwt = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  if (req.headers.authorization) {
+    try {
+      req.user = extract_and_verify_token(req);
+    } catch {
+      // Ignore in optional mode
+    }
+  }
+  next();
+};

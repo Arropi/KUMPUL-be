@@ -68,6 +68,37 @@ export const create_supplier_commodity_service = async (
     throw new AppError('Entitas bisnis ini bukan merupakan SUPPLIER', 400, 'INVALID_SUPPLIER_ROLE');
   }
 
+  // Validasi kelengkapan profil supplier: Nomor Kontak, Rekening Bank, dan Kapasitas Penyimpanan Gudang
+  const entity = await find_entity_by_id(target_role.entity_id);
+  if (!entity) {
+    throw new AppError('Entitas bisnis pemilik role supplier tidak ditemukan', 404, 'BUSINESS_ENTITY_NOT_FOUND');
+  }
+
+  const bank_info = (entity.bank_account_info || {}) as Record<string, any>;
+  const has_phone = Boolean(entity.phone_number?.trim() || bank_info.phone?.trim());
+  const has_bank = Boolean(
+    (Array.isArray(bank_info.accounts) && bank_info.accounts.length > 0) ||
+    bank_info.account_number?.trim()
+  );
+  const has_storage = Boolean(
+    (target_role.storage_capacity && target_role.storage_capacity > 0) ||
+    Number(bank_info.storage_value) > 0
+  );
+
+  if (!has_phone || !has_bank || !has_storage) {
+    const missing: string[] = [];
+    if (!has_phone) missing.push('nomor kontak/telepon');
+    if (!has_bank) missing.push('rekening bank');
+    if (!has_storage) missing.push('kapasitas penyimpanan gudang');
+
+    throw new AppError(
+      `Profil usaha Anda belum lengkap. Harap lengkapi ${missing.join(', ')} pada menu Profil terlebih dahulu sebelum mengunggah katalog komoditas.`,
+      400,
+      'INCOMPLETE_SUPPLIER_PROFILE',
+      { missing_fields: missing }
+    );
+  }
+
   const numeric_base_price = parseFloat(String(payload.base_price));
   if (isNaN(numeric_base_price) || numeric_base_price <= 0) {
     throw new AppError('base_price harus bernilai angka lebih besar dari 0', 400, 'INVALID_BASE_PRICE');
@@ -106,7 +137,7 @@ export const create_supplier_commodity_service = async (
 
   let formatted_price_tiers: { min_qty: string; max_qty: string; tier_price: string }[] = [];
   if (payload.price_tiers && payload.price_tiers.length > 0) {
-    formatted_price_tiers = format_and_validate_price_tiers(payload.price_tiers);
+    formatted_price_tiers = format_and_validate_price_tiers(payload.price_tiers, numeric_base_price);
   }
 
   const commodity_insert_payload: SupplierCommodityInsertPayload = {
@@ -248,7 +279,12 @@ export const update_supplier_commodity_service = async (
   if (payload.price_tiers !== undefined) {
     await delete_price_tiers_by_commodity_id(commodity_id);
     if (payload.price_tiers.length > 0) {
-      const validated_new_tiers = format_and_validate_price_tiers(payload.price_tiers);
+      const effective_base_price =
+        payload.base_price !== undefined ? payload.base_price : existing_item.base_price;
+      const validated_new_tiers = format_and_validate_price_tiers(
+        payload.price_tiers,
+        effective_base_price
+      );
       const tiers_payload = validated_new_tiers.map((tier_item) => ({
         commodity_id,
         min_qty: tier_item.min_qty,
@@ -256,6 +292,19 @@ export const update_supplier_commodity_service = async (
         tier_price: tier_item.tier_price,
       }));
       await insert_commodity_price_tiers(tiers_payload);
+    }
+  } else if (payload.base_price !== undefined) {
+    const existing_tiers = await find_price_tiers_by_commodity_ids([commodity_id]);
+    const tiers = existing_tiers[commodity_id] || [];
+    const new_base_price = parseFloat(String(payload.base_price));
+    for (const t of tiers) {
+      if (parseFloat(t.tier_price) > new_base_price) {
+        throw new AppError(
+          `Harga utama baru (${new_base_price}) lebih rendah dari tier harga yang sudah ada (${t.tier_price}). Harap perbarui daftar tier harga terlebih dahulu.`,
+          400,
+          'TIER_PRICE_EXCEEDS_BASE_PRICE'
+        );
+      }
     }
   }
 
