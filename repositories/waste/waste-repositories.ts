@@ -73,10 +73,8 @@ export const find_waste_listings_with_filter = async (
     conditions.push(eq(waste_listings.waste_category, filter.category));
   }
 
-  if (filter.status) {
+  if (filter.status && (filter.status as string) !== 'ALL') {
     conditions.push(eq(waste_listings.listing_status, filter.status));
-  } else {
-    conditions.push(eq(waste_listings.listing_status, 'AVAILABLE'));
   }
 
   if (filter.max_price !== undefined && filter.max_price !== null) {
