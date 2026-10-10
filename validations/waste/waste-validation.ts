@@ -14,6 +14,29 @@ const create_waste_listing_schema = z.object({
   is_marketplace_visible: z.boolean().optional().default(true),
 });
 
+const update_waste_listing_schema = z.object({
+  listing_title: z.string().min(3, { message: 'Judul listing minimal 3 karakter' }).optional(),
+  waste_category: z
+    .enum(['ORGANIK_BASAH', 'ORGANIK_KERING', 'TEKSTIL_PERCA', 'ANORGANIK'], {
+      message: 'Kategori limbah tidak valid',
+    })
+    .optional(),
+  available_weight: z.coerce
+    .number()
+    .positive({ message: 'Berat tersedia harus lebih dari 0' })
+    .optional(),
+  price_per_kg: z.coerce
+    .number()
+    .min(0, { message: 'Harga per kg tidak boleh bernilai negatif' })
+    .optional(),
+  expired_at: z
+    .string()
+    .datetime({ message: 'expired_at harus berupa format tanggal ISO 8601' })
+    .optional(),
+  notes: z.string().optional(),
+  is_marketplace_visible: z.boolean().optional(),
+  listing_status: z.enum(['AVAILABLE', 'SOLD_OUT', 'REFERRED_TO_OFFTAKER']).optional(),
+});
 const buy_waste_schema = z.object({
   purchased_weight: z.coerce.number().positive({ message: 'Berat pembelian harus lebih dari 0' }),
   pickup_date: z
@@ -75,6 +98,19 @@ export const offtaker_referral_validation = (
 ): void => {
   try {
     req.body = offtaker_referral_schema.parse(req.body);
+    next();
+  } catch (validation_error) {
+    next(validation_error);
+  }
+};
+
+export const update_waste_listing_validation = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  try {
+    req.body = update_waste_listing_schema.parse(req.body);
     next();
   } catch (validation_error) {
     next(validation_error);

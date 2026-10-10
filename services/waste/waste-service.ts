@@ -14,12 +14,14 @@ import {
   insert_waste_transaction,
   release_waste_escrow,
   update_waste_listing,
+  delete_waste_listing,
   update_waste_transaction,
 } from '../../repositories/waste/waste-repositories.ts';
 import { create_snap_transaction } from '../payments/midtrans-service.ts';
 import type {
   BuyWasteListingDTO,
   CreateWasteListingDTO,
+  UpdateWasteListingDTO,
   NearestOfftakerQueryDTO,
   NearestOfftakerResult,
   WasteListingFilterDTO,
@@ -79,6 +81,63 @@ export const get_waste_listing_detail_service = async (listing_id: string) => {
     throw new AppError('Listing limbah tidak ditemukan', 404, 'WASTE_LISTING_NOT_FOUND');
   }
   return listing_record;
+};
+
+export const update_waste_listing_service = async (
+  seller_role_id: string,
+  listing_id: string,
+  payload: UpdateWasteListingDTO
+) => {
+  const listing_record = await find_waste_listing_by_id(listing_id);
+  if (!listing_record) {
+    throw new AppError('Listing limbah tidak ditemukan', 404, 'WASTE_LISTING_NOT_FOUND');
+  }
+
+  if (listing_record.seller_role_id !== seller_role_id) {
+    throw new AppError(
+      'Hanya pemilik listing limbah yang dapat memperbarui data ini',
+      403,
+      'UNAUTHORIZED_LISTING_UPDATE'
+    );
+  }
+
+  const update_data: Parameters<typeof update_waste_listing>[1] = {};
+  if (payload.listing_title !== undefined) update_data.listing_title = payload.listing_title;
+  if (payload.waste_category !== undefined) update_data.waste_category = payload.waste_category;
+  if (payload.available_weight !== undefined) update_data.available_weight = String(payload.available_weight);
+  if (payload.price_per_kg !== undefined) update_data.price_per_kg = String(payload.price_per_kg);
+  if (payload.expired_at !== undefined) {
+    const exp = new Date(payload.expired_at);
+    if (isNaN(exp.getTime())) {
+      throw new AppError('Format tanggal kedaluwarsa tidak valid', 400, 'INVALID_EXPIRY_DATE');
+    }
+    update_data.expired_at = exp;
+  }
+  if (payload.notes !== undefined) update_data.notes = payload.notes;
+  if (payload.is_marketplace_visible !== undefined) update_data.is_marketplace_visible = payload.is_marketplace_visible;
+  if (payload.listing_status !== undefined) update_data.listing_status = payload.listing_status;
+
+  return await update_waste_listing(listing_id, update_data);
+};
+
+export const delete_waste_listing_service = async (
+  seller_role_id: string,
+  listing_id: string
+) => {
+  const listing_record = await find_waste_listing_by_id(listing_id);
+  if (!listing_record) {
+    throw new AppError('Listing limbah tidak ditemukan', 404, 'WASTE_LISTING_NOT_FOUND');
+  }
+
+  if (listing_record.seller_role_id !== seller_role_id) {
+    throw new AppError(
+      'Hanya pemilik listing limbah yang dapat menghapus data ini',
+      403,
+      'UNAUTHORIZED_LISTING_DELETE'
+    );
+  }
+
+  return await delete_waste_listing(listing_id);
 };
 
 export const buy_waste_listing_service = async (

@@ -139,6 +139,17 @@ export const update_waste_listing = async (
   return updated_record;
 };
 
+export const delete_waste_listing = async (
+  listing_id: string
+): Promise<WasteListing | null> => {
+  const [deleted_record] = await db
+    .delete(waste_listings)
+    .where(eq(waste_listings.id, listing_id))
+    .returning();
+
+  return deleted_record ?? null;
+};
+
 export const insert_waste_transaction = async (
   payload: NewWasteTransaction
 ): Promise<WasteTransaction> => {

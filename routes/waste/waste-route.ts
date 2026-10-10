@@ -3,12 +3,14 @@ import {
   buy_waste_listing,
   confirm_waste_pickup,
   create_waste_listing,
+  delete_waste_listing,
   get_buyer_waste_transactions,
   get_nearest_offtakers,
   get_seller_waste_transactions,
   get_waste_listing_detail,
   get_waste_listings,
   refer_listing_to_offtaker,
+  update_waste_listing,
 } from '../../controllers/waste/waste-controller.ts';
 import { authenticate_jwt } from '../../middleware/auth-middleware.ts';
 import {
@@ -16,6 +18,7 @@ import {
   confirm_pickup_validation,
   create_waste_listing_validation,
   offtaker_referral_validation,
+  update_waste_listing_validation,
 } from '../../validations/waste/waste-validation.ts';
 
 const router = Router();
@@ -142,6 +145,70 @@ router.get('/transactions/sales', authenticate_jwt, get_seller_waste_transaction
  *         description: Listing limbah tidak ditemukan
  */
 router.get('/:id', get_waste_listing_detail);
+
+/**
+ * @swagger
+ * /api/waste-listings/{id}:
+ *   put:
+ *     summary: Memperbarui data listing limbah milik sendiri
+ *     tags: [Waste Exchange]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               listing_title:
+ *                 type: string
+ *               waste_category:
+ *                 type: string
+ *                 enum: [ORGANIK_BASAH, ORGANIK_KERING, TEKSTIL_PERCA, ANORGANIK]
+ *               available_weight:
+ *                 type: number
+ *               price_per_kg:
+ *                 type: number
+ *               expired_at:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Listing limbah berhasil diperbarui
+ *   delete:
+ *     summary: Menghapus listing limbah milik sendiri
+ *     tags: [Waste Exchange]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Listing limbah berhasil dihapus
+ */
+router.put(
+  '/:id',
+  authenticate_jwt,
+  update_waste_listing_validation,
+  update_waste_listing
+);
+
+router.delete(
+  '/:id',
+  authenticate_jwt,
+  delete_waste_listing
+);
 
 /**
  * @swagger

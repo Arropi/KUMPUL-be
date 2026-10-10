@@ -3,12 +3,14 @@ import {
   buy_waste_listing_service,
   confirm_waste_pickup_service,
   create_waste_listing_service,
+  delete_waste_listing_service,
   get_buyer_waste_transactions_service,
   get_nearest_offtakers_service,
   get_seller_waste_transactions_service,
   get_waste_listing_detail_service,
   get_waste_listings_service,
   refer_listing_to_offtaker_service,
+  update_waste_listing_service,
 } from '../../services/waste/waste-service.ts';
 import type { WasteCategoryType, WasteListingStatusType } from '../../types/waste-types.ts';
 import { get_authenticated_role_id } from '../../utils/auth-utils.ts';
@@ -72,6 +74,49 @@ export const get_waste_listing_detail = async (
       status: 'success',
       message: 'Detail listing limbah berhasil diambil',
       data: listing_detail,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const update_waste_listing = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const seller_role_id = await get_authenticated_role_id(req);
+    const listing_id = req.params.id as string;
+    const updated_listing = await update_waste_listing_service(
+      seller_role_id,
+      listing_id,
+      req.body
+    );
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Listing limbah berhasil diperbarui',
+      data: updated_listing,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const delete_waste_listing = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const seller_role_id = await get_authenticated_role_id(req);
+    const listing_id = req.params.id as string;
+    await delete_waste_listing_service(seller_role_id, listing_id);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Listing limbah berhasil dihapus',
     });
   } catch (controller_error) {
     next(controller_error);
