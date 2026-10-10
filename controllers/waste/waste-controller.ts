@@ -4,6 +4,7 @@ import {
   confirm_waste_pickup_service,
   create_waste_listing_service,
   delete_waste_listing_service,
+  deposit_waste_to_bank_sampah_service,
   get_buyer_waste_transactions_service,
   get_nearest_offtakers_service,
   get_seller_waste_transactions_service,
@@ -226,6 +227,37 @@ export const refer_listing_to_offtaker = async (
   }
 };
 
+export const deposit_waste_to_bank_sampah = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const listing_id = req.params.id as string;
+    let seller_role_id: string;
+    try {
+      seller_role_id = await get_authenticated_role_id(req);
+    } catch {
+      const listing = await get_waste_listing_detail_service(listing_id);
+      seller_role_id = listing.seller_role_id;
+    }
+    const { bank_sampah_name, revenue_amount, weight_kg, notes } = req.body;
+
+    const result = await deposit_waste_to_bank_sampah_service(
+      seller_role_id,
+      listing_id,
+      { bank_sampah_name, revenue_amount, weight_kg, notes }
+    );
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Limbah berhasil disetor ke Bank Sampah dan pendapatan tercatat!',
+      data: result,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
 export const get_buyer_waste_transactions = async (
   req: Request,
   res: Response,

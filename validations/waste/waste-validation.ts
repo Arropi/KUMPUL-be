@@ -47,11 +47,16 @@ const buy_waste_schema = z.object({
 const confirm_pickup_schema = z.object({
   pickup_code: z.string().min(4, { message: 'Kode pickup minimal 4 karakter' }),
 });
-
 const offtaker_referral_schema = z.object({
   offtaker_id: z.string().uuid({ message: 'offtaker_id harus berformat UUID valid' }),
 });
 
+const deposit_bank_sampah_schema = z.object({
+  bank_sampah_name: z.string().min(2, { message: 'Nama Bank Sampah minimal 2 karakter' }),
+  revenue_amount: z.coerce.number().min(0, { message: 'Penghasilan tidak boleh bernilai negatif' }),
+  weight_kg: z.coerce.number().positive().optional(),
+  notes: z.string().optional(),
+});
 export const create_waste_listing_validation = (
   req: Request,
   _res: Response,
@@ -103,6 +108,20 @@ export const offtaker_referral_validation = (
     next(validation_error);
   }
 };
+
+export const deposit_bank_sampah_validation = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  try {
+    req.body = deposit_bank_sampah_schema.parse(req.body);
+    next();
+  } catch (validation_error) {
+    next(validation_error);
+  }
+};
+
 
 export const update_waste_listing_validation = (
   req: Request,

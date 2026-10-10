@@ -4,6 +4,7 @@ import {
   confirm_waste_pickup,
   create_waste_listing,
   delete_waste_listing,
+  deposit_waste_to_bank_sampah,
   get_buyer_waste_transactions,
   get_nearest_offtakers,
   get_seller_waste_transactions,
@@ -17,6 +18,7 @@ import {
   buy_waste_validation,
   confirm_pickup_validation,
   create_waste_listing_validation,
+  deposit_bank_sampah_validation,
   offtaker_referral_validation,
   update_waste_listing_validation,
 } from '../../validations/waste/waste-validation.ts';
@@ -369,6 +371,18 @@ router.post(
   authenticate_jwt,
   offtaker_referral_validation,
   refer_listing_to_offtaker
+);
+
+router.post(
+  '/:id/bank-sampah',
+  (req, res, next) => {
+    if (req.headers.authorization) {
+      return authenticate_jwt(req, res, next);
+    }
+    next();
+  },
+  deposit_bank_sampah_validation,
+  deposit_waste_to_bank_sampah
 );
 
 export default router;

@@ -282,7 +282,7 @@ export const commodity_batch_tags = pgTable('commodity_batch_tags', {
 export const procurement_pools = pgTable('procurement_pools', {
   id: uuid('id').defaultRandom().primaryKey(),
   commodity_id: uuid('commodity_id')
-    .references(() => supplier_commodities.id)
+    .references(() => supplier_commodities.id, { onDelete: 'cascade' })
     .notNull(),
   host_umkm_role_id: uuid('host_umkm_role_id').references(() => business_roles.id),
   target_moq: numeric('target_moq').notNull(),

@@ -3,6 +3,8 @@ import {
   find_all_offtakers,
   find_entity_by_role_id,
   find_offtaker_by_id,
+  find_or_create_offtaker_by_name,
+  find_valid_role_id,
   find_waste_listing_by_id,
   find_waste_listings_with_filter,
   find_waste_transaction_by_id,
@@ -350,6 +352,74 @@ export const refer_listing_to_offtaker_service = async (
     contact_person: offtaker_record.contact_person,
     phone: offtaker_record.phone,
     address: offtaker_record.address,
+  };
+};
+
+export const deposit_waste_to_bank_sampah_service = async (
+  seller_role_id: string,
+  listing_id: string,
+  payload: {
+    bank_sampah_name: string;
+    revenue_amount: number;
+    weight_kg?: number;
+    notes?: string;
+  }
+) => {
+  const listing_record = await find_waste_listing_by_id(listing_id);
+  if (!listing_record) {
+    throw new AppError('Listing limbah tidak ditemukan', 404, 'WASTE_LISTING_NOT_FOUND');
+  }
+
+  if (listing_record.seller_role_id !== seller_role_id) {
+    throw new AppError('Hanya pemilik listing yang dapat menyetorkan limbah ini', 403, 'UNAUTHORIZED_DEPOSIT');
+  }
+
+  const weight = payload.weight_kg ?? Number(listing_record.available_weight);
+
+  // 1. Simpan atau cari Bank Sampah di offtaker_directories
+  const offtaker = await find_or_create_offtaker_by_name(
+    payload.bank_sampah_name,
+    listing_record.waste_category,
+    payload.notes
+  );
+
+  // 2. Catat manifest referral log
+  const manifest_number = `MFT-BS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  await insert_offtaker_referral_log(listing_id, offtaker.id, manifest_number);
+
+  // 3. Catat transaksi selesai di waste_transactions agar masuk ke kas & dashboard
+  const buyer_role_id = (await find_valid_role_id(seller_role_id)) || seller_role_id;
+  const pickup_code = `BS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`; // max 9 chars
+  const transaction = await insert_waste_transaction({
+    listing_id: listing_record.id,
+    buyer_role_id,
+    purchased_weight: String(weight),
+    total_amount: String(payload.revenue_amount),
+    fulfillment_status: 'ACCEPTED_COMPLETED',
+    payment_status: 'SETTLED',
+    pickup_date: new Date().toISOString().slice(0, 10),
+    picked_up_at: new Date(),
+    pickup_code,
+  });
+  // 4. Update status listing limbah menjadi SOLD_OUT dengan sisa stok 0
+  const note_msg = `[Setor ke ${payload.bank_sampah_name} • Hasil: Rp ${payload.revenue_amount.toLocaleString('id-ID')}]`;
+  const updated_notes = listing_record.notes
+    ? `${listing_record.notes}\n${note_msg}`
+    : note_msg;
+
+  await update_waste_listing(listing_id, {
+    available_weight: '0',
+    listing_status: 'SOLD_OUT',
+    notes: updated_notes,
+  });
+
+  return {
+    listing_id,
+    transaction_id: transaction.id,
+    bank_sampah_name: payload.bank_sampah_name,
+    revenue_amount: payload.revenue_amount,
+    weight_kg: weight,
+    manifest_number,
   };
 };
 

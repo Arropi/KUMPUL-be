@@ -73,9 +73,10 @@ export const find_waste_listings_with_filter = async (
     conditions.push(eq(waste_listings.waste_category, filter.category));
   }
 
-  if (filter.status) {
+  if (filter.status && filter.status !== ('ALL' as any)) {
     conditions.push(eq(waste_listings.listing_status, filter.status));
-  } else {
+  } else if (!filter.status) {
+    // Default: jika tidak ada parameter status, tampilkan yang aktif tersedia
     conditions.push(eq(waste_listings.listing_status, 'AVAILABLE'));
   }
 
@@ -274,6 +275,50 @@ export const find_offtaker_by_id = async (offtaker_id: string) => {
     .limit(1);
 
   return records[0] ?? null;
+};
+
+export const find_or_create_offtaker_by_name = async (
+  org_name: string,
+  category: string,
+  address?: string
+) => {
+  const existing = await db
+    .select()
+    .from(offtaker_directories)
+    .where(eq(offtaker_directories.org_name, org_name.trim()))
+    .limit(1);
+
+  if (existing[0]) {
+    return existing[0];
+  }
+
+  const [created] = await db
+    .insert(offtaker_directories)
+    .values({
+      org_name: org_name.trim(),
+      service_area_city: 'Surabaya',
+      address: address || 'Drop Point Bank Sampah Mitra',
+      accepted_waste_types: [category],
+    })
+    .returning();
+
+  return created;
+};
+
+export const find_valid_role_id = async (fallback_role_id?: string) => {
+  if (fallback_role_id) {
+    const check = await db
+      .select({ id: business_roles.id })
+      .from(business_roles)
+      .where(eq(business_roles.id, fallback_role_id))
+      .limit(1);
+    if (check[0]) return check[0].id;
+  }
+  const any_role = await db
+    .select({ id: business_roles.id })
+    .from(business_roles)
+    .limit(1);
+  return any_role[0]?.id;
 };
 
 export const insert_offtaker_referral_log = async (
