@@ -361,6 +361,7 @@ export const umkm_procurement_orders = pgTable('umkm_procurement_orders', {
   snap_redirect_url: text('snap_redirect_url'),
   payment_method: varchar('payment_method'),
   settlement_time: timestamp('settlement_time', { withTimezone: true }),
+  is_stock_deducted: boolean('is_stock_deducted').default(false).notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

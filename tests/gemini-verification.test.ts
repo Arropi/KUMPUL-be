@@ -139,9 +139,12 @@ describe('Gemini AI Commodity Batch Tag Document Verification Tests', () => {
     });
     created_tag_ids.push(tag_without_file.id);
 
-    await expect(verify_batch_tag_with_ai_service(tag_without_file.id)).rejects.toThrow(
-      'Batch tag tidak memiliki dokumen pendukung'
-    );
+    try {
+      await verify_batch_tag_with_ai_service(tag_without_file.id);
+      expect(true).toBe(false); // should not reach
+    } catch (err: any) {
+      expect(err.message).toContain('Batch tag tidak memiliki dokumen pendukung');
+    }
   }, 30000);
 
   it('5. Dedicated Endpoint: Memvalidasi dokumen pada batch tag menggunakan verify_batch_tag_with_ai_service', async () => {

@@ -193,9 +193,13 @@ export const get_supplier_commodity_by_id_service = async (
   ]);
 
   const latest_batch_tag = batch_tags && batch_tags.length > 0 ? batch_tags[0] : null;
+  const stock_num = parseFloat(commodity.stock || '0');
+  const reserved_num = parseFloat(commodity.reserved_stock || '0');
+  const available_stock = String(Math.max(0, stock_num - reserved_num));
 
   return {
     ...commodity,
+    available_stock,
     price_tiers,
     batch_tag: latest_batch_tag,
     batch_tags,
@@ -225,10 +229,17 @@ export const list_supplier_commodities_service = async (
   const commodity_ids = commodities.map((item) => item.id);
   const tiers_by_commodity = await find_price_tiers_by_commodity_ids(commodity_ids);
 
-  return commodities.map((commodity_item) => ({
-    ...commodity_item,
-    price_tiers: tiers_by_commodity[commodity_item.id] || [],
-  }));
+  return commodities.map((commodity_item) => {
+    const stock_num = parseFloat(commodity_item.stock || '0');
+    const reserved_num = parseFloat(commodity_item.reserved_stock || '0');
+    const available_stock = String(Math.max(0, stock_num - reserved_num));
+
+    return {
+      ...commodity_item,
+      available_stock,
+      price_tiers: tiers_by_commodity[commodity_item.id] || [],
+    };
+  });
 };
 
 export const update_supplier_commodity_service = async (
@@ -345,10 +356,17 @@ export const get_commodities_by_entity_id_service = async (
   const commodity_ids = commodities.map((item) => item.id);
   const tiers_by_commodity = await find_price_tiers_by_commodity_ids(commodity_ids);
 
-  return commodities.map((commodity_item) => ({
-    ...commodity_item,
-    price_tiers: tiers_by_commodity[commodity_item.id] || [],
-  }));
+  return commodities.map((commodity_item) => {
+    const stock_num = parseFloat(commodity_item.stock || '0');
+    const reserved_num = parseFloat(commodity_item.reserved_stock || '0');
+    const available_stock = String(Math.max(0, stock_num - reserved_num));
+
+    return {
+      ...commodity_item,
+      available_stock,
+      price_tiers: tiers_by_commodity[commodity_item.id] || [],
+    };
+  });
 };
 
 export const get_commodity_by_id_service = get_supplier_commodity_by_id_service;

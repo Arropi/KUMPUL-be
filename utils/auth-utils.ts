@@ -1,7 +1,13 @@
 import type { Request } from 'express';
 import { AppError } from '../middleware/error-middleware.ts';
-import { find_active_role_by_entity_and_type } from '../repositories/profile/profile-repositories.ts';
+import {
+  find_active_role_by_entity_and_type,
+  find_roles_by_entity_id,
+  find_entity_by_auth_user_id,
+} from '../repositories/profile/profile-repositories.ts';
 import type { RoleType } from '../types/profile-types.ts';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const get_authenticated_role_id = async (
   req: Request,
@@ -18,11 +24,42 @@ export const get_authenticated_role_id = async (
     return direct_role_id;
   }
 
-  const entity_id = req.user?.entity_id;
-  if (entity_id && expected_role) {
-    const role_record = await find_active_role_by_entity_and_type(entity_id, expected_role);
-    if (role_record) {
-      return role_record.id;
+  let entity_id = req.user?.entity_id;
+
+  // Jika entity_id belum ada di req.user, coba cari berdasarkan auth_user_id / user_id / sub
+  if (!entity_id) {
+    const auth_uid_candidate =
+      req.user?.auth_user_id ||
+      req.user?.user_id ||
+      (typeof req.user?.sub === 'string' && UUID_REGEX.test(req.user.sub)
+        ? req.user.sub
+        : undefined);
+
+    if (auth_uid_candidate) {
+      const entity = await find_entity_by_auth_user_id(auth_uid_candidate);
+      if (entity) {
+        entity_id = entity.id;
+        if (req.user) {
+          req.user.entity_id = entity.id;
+        }
+      }
+    }
+  }
+
+  if (entity_id) {
+    const target_role = expected_role || (req.user?.role as RoleType) || (req.user?.role_type as RoleType);
+    if (target_role) {
+      const role_record = await find_active_role_by_entity_and_type(entity_id, target_role);
+      if (role_record) {
+        return role_record.id;
+      }
+    }
+
+    // Jika target_role belum spesifik atau tidak ditemukan, ambil role aktif pertama yang dimiliki entitas
+    const entity_roles = await find_roles_by_entity_id(entity_id);
+    const active_role = entity_roles.find((r) => r.is_active && (!expected_role || r.role_type === expected_role));
+    if (active_role) {
+      return active_role.id;
     }
   }
 

@@ -69,6 +69,9 @@ export const get_waste_listings = async (
       role_ids.push(req.user.active_role.id);
     }
 
+    const is_my_listings = req.query.my_listings_only === 'true' || req.query.scope === 'my';
+    const is_include_own = req.query.include_own === 'true' || is_my_listings;
+
     const filter = {
       category: req.query.category as WasteCategoryType | undefined,
       max_price: req.query.max_price ? Number(req.query.max_price) : undefined,
@@ -76,8 +79,9 @@ export const get_waste_listings = async (
       search: req.query.search as string | undefined,
       page: req.query.page ? Number(req.query.page) : 1,
       limit: req.query.limit ? Number(req.query.limit) : 20,
-      exclude_entity_id: entity_id,
-      exclude_role_ids: role_ids,
+      seller_entity_id: is_my_listings ? entity_id : undefined,
+      exclude_entity_id: is_include_own ? undefined : entity_id,
+      exclude_role_ids: is_include_own ? undefined : role_ids,
     };
 
     const listings = await get_waste_listings_service(filter);
@@ -168,11 +172,16 @@ export const get_nearest_offtakers = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const role_id = await get_authenticated_role_id(req);
+    let role_id = '';
+    try {
+      role_id = await get_authenticated_role_id(req);
+    } catch {
+      // Optional auth fallback
+    }
     const query = {
       listing_id: req.query.listing_id as string | undefined,
-      latitude: req.query.latitude ? Number(req.query.latitude) : undefined,
-      longitude: req.query.longitude ? Number(req.query.longitude) : undefined,
+      latitude: req.query.latitude ? Number(req.query.latitude) : -7.3248,
+      longitude: req.query.longitude ? Number(req.query.longitude) : 112.7758,
       limit: req.query.limit ? Number(req.query.limit) : 5,
     };
 

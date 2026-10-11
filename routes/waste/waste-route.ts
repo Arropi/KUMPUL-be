@@ -93,7 +93,16 @@ router.get('/', authenticate_optional_jwt, get_waste_listings);
  *       200:
  *         description: Daftar Bank Sampah terdekat berhasil diambil
  */
-router.get('/recommendations/offtakers', authenticate_jwt, get_nearest_offtakers);
+router.get(
+  '/recommendations/offtakers',
+  (req, res, next) => {
+    if (req.headers.authorization) {
+      return authenticate_jwt(req, res, next);
+    }
+    next();
+  },
+  get_nearest_offtakers
+);
 
 /**
  * @swagger

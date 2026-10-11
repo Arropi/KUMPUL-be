@@ -520,7 +520,8 @@ export const find_active_pools_with_details = async (
 
 export const find_market_price_benchmarks = async (
   supplier_role_id: string,
-  entity_id?: string | null
+  entity_id?: string | null,
+  role_ids?: string[]
 ) => {
   // Ambil komoditas milik supplier ini
   const my_commodities = await db
@@ -528,6 +529,11 @@ export const find_market_price_benchmarks = async (
       id: supplier_commodities.id,
       name: supplier_commodities.name,
       base_price: supplier_commodities.base_price,
+      sku: supplier_commodities.sku,
+      image_url: supplier_commodities.image_url,
+      wholesale_unit: supplier_commodities.wholesale_unit,
+      base_moq: supplier_commodities.base_moq,
+      stock: supplier_commodities.stock,
     })
     .from(supplier_commodities)
     .where(eq(supplier_commodities.supplier_role_id, supplier_role_id));
@@ -539,6 +545,9 @@ export const find_market_price_benchmarks = async (
   ];
   if (entity_id) {
     market_conditions.push(ne(business_roles.entity_id, entity_id));
+  }
+  if (role_ids && role_ids.length > 0) {
+    market_conditions.push(notInArray(supplier_commodities.supplier_role_id, role_ids));
   }
 
   const market_averages = await db
@@ -556,25 +565,37 @@ export const find_market_price_benchmarks = async (
     avg_map.set(m.name.toLowerCase().trim(), Number(m.avg_price));
   });
 
-  return my_commodities.map((item) => {
-    const your_price = Number(item.base_price);
-    const avg = avg_map.get(item.name.toLowerCase().trim()) ?? your_price;
+  const benchmark_results = [];
+  for (const item of my_commodities) {
+    const market_avg = avg_map.get(item.name.toLowerCase().trim());
+    // Hanya sertakan jika benar-benar ada data komoditas pembanding dari supplier lain
+    if (market_avg === undefined || isNaN(market_avg) || market_avg <= 0) {
+      continue;
+    }
 
+    const your_price = Number(item.base_price);
     let competitiveness: 'COMPETITIVE' | 'AVERAGE' | 'EXPENSIVE' = 'AVERAGE';
-    if (your_price < avg * 0.95) {
+    if (your_price < market_avg * 0.95) {
       competitiveness = 'COMPETITIVE';
-    } else if (your_price > avg * 1.05) {
+    } else if (your_price > market_avg * 1.05) {
       competitiveness = 'EXPENSIVE';
     }
 
-    return {
+    benchmark_results.push({
       commodity_id: item.id,
       commodity_name: item.name,
       your_base_price: your_price,
-      market_average_price: Math.round(avg),
+      market_average_price: Math.round(market_avg),
       price_competitiveness: competitiveness,
-    };
-  });
+      image_url: item.image_url,
+      sku: item.sku,
+      wholesale_unit: item.wholesale_unit,
+      base_moq: item.base_moq ? Number(item.base_moq) : 10,
+      stock: item.stock ? Number(item.stock) : 0,
+    });
+  }
+
+  return benchmark_results;
 };
 
 export const find_popular_recipe_ingredients = async (limit = 10) => {

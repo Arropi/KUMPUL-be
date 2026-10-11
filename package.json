@@ -10,7 +10,7 @@
     "dev": "bun --watch index.ts",
     "start": "bun index.ts",
     "build": "bun tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test --max-concurrency=1"
   },
   "peerDependencies": {
     "typescript": "^7.0.2"

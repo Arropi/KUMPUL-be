@@ -222,7 +222,8 @@ export const get_nearest_offtakers_service = async (
   }
 
   if (user_lat === null || user_lon === null || isNaN(user_lat) || isNaN(user_lon)) {
-    throw new AppError('Titik koordinat (latitude & longitude) tidak ditemukan pada profil usaha', 400, 'MISSING_COORDINATES');
+    user_lat = -7.3248;
+    user_lon = 112.7758;
   }
 
   const all_offtakers = await find_all_offtakers();
