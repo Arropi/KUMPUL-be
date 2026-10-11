@@ -173,6 +173,7 @@ export const find_waste_transaction_by_id = async (transaction_id: string) => {
   const records = await db
     .select({
       id: waste_transactions.id,
+      midtrans_order_id: waste_transactions.midtrans_order_id,
       listing_id: waste_transactions.listing_id,
       buyer_role_id: waste_transactions.buyer_role_id,
       purchased_weight: waste_transactions.purchased_weight,
