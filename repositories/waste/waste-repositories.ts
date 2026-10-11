@@ -222,6 +222,7 @@ export const find_waste_transactions_by_buyer = async (buyer_role_id: string) =>
   return await db
     .select({
       id: waste_transactions.id,
+      midtrans_order_id: waste_transactions.midtrans_order_id,
       listing_id: waste_transactions.listing_id,
       listing_title: waste_listings.listing_title,
       waste_category: waste_listings.waste_category,
@@ -234,9 +235,14 @@ export const find_waste_transactions_by_buyer = async (buyer_role_id: string) =>
       snap_token: waste_transactions.snap_token,
       snap_redirect_url: waste_transactions.snap_redirect_url,
       created_at: waste_transactions.created_at,
+      seller_name: business_entities.legal_name,
+      seller_address: business_entities.default_address,
+      seller_phone: business_entities.phone_number,
     })
     .from(waste_transactions)
     .innerJoin(waste_listings, eq(waste_transactions.listing_id, waste_listings.id))
+    .innerJoin(business_roles, eq(waste_listings.seller_role_id, business_roles.id))
+    .innerJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
     .where(eq(waste_transactions.buyer_role_id, buyer_role_id))
     .orderBy(desc(waste_transactions.created_at));
 };
@@ -245,6 +251,7 @@ export const find_waste_transactions_by_seller = async (seller_role_id: string) 
   return await db
     .select({
       id: waste_transactions.id,
+      midtrans_order_id: waste_transactions.midtrans_order_id,
       listing_id: waste_transactions.listing_id,
       listing_title: waste_listings.listing_title,
       waste_category: waste_listings.waste_category,
@@ -256,12 +263,19 @@ export const find_waste_transactions_by_seller = async (seller_role_id: string) 
       picked_up_at: waste_transactions.picked_up_at,
       payment_status: waste_transactions.payment_status,
       created_at: waste_transactions.created_at,
+      buyer_name: business_entities.legal_name,
+      buyer_phone: business_entities.phone_number,
+      buyer_address: business_entities.default_address,
     })
+
     .from(waste_transactions)
     .innerJoin(waste_listings, eq(waste_transactions.listing_id, waste_listings.id))
+    .innerJoin(business_roles, eq(waste_transactions.buyer_role_id, business_roles.id))
+    .innerJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
     .where(eq(waste_listings.seller_role_id, seller_role_id))
     .orderBy(desc(waste_transactions.created_at));
 };
+
 
 export const find_all_offtakers = async () => {
   return await db

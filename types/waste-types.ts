@@ -63,3 +63,11 @@ export interface NearestOfftakerResult {
   service_area_city: string;
   distance_km: number;
 }
+
+export interface DepositWasteToBankSampahDTO {
+  bank_sampah_name: string;
+  revenue_amount: number;
+  weight_kg?: number;
+  notes?: string;
+}
+

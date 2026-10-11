@@ -80,3 +80,24 @@ export const offtaker_referral_validation = (
     next(validation_error);
   }
 };
+
+const deposit_waste_to_bank_sampah_schema = z.object({
+  bank_sampah_name: z.string().min(2, { message: 'Nama bank sampah minimal 2 karakter' }),
+  revenue_amount: z.coerce.number().min(0, { message: 'Nominal pendapatan tidak boleh negatif' }),
+  weight_kg: z.coerce.number().positive({ message: 'Berat yang disetor harus lebih dari 0' }).optional(),
+  notes: z.string().optional(),
+});
+
+export const deposit_waste_to_bank_sampah_validation = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
+  try {
+    req.body = deposit_waste_to_bank_sampah_schema.parse(req.body);
+    next();
+  } catch (validation_error) {
+    next(validation_error);
+  }
+};
+

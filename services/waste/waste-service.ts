@@ -20,10 +20,12 @@ import { create_snap_transaction } from '../payments/midtrans-service.ts';
 import type {
   BuyWasteListingDTO,
   CreateWasteListingDTO,
+  DepositWasteToBankSampahDTO,
   NearestOfftakerQueryDTO,
   NearestOfftakerResult,
   WasteListingFilterDTO,
 } from '../../types/waste-types.ts';
+
 
 const calculate_haversine_distance = (
   lat1: number,
@@ -302,3 +304,75 @@ export const get_buyer_waste_transactions_service = async (buyer_role_id: string
 export const get_seller_waste_transactions_service = async (seller_role_id: string) => {
   return await find_waste_transactions_by_seller(seller_role_id);
 };
+
+export const deposit_waste_to_bank_sampah_service = async (
+  seller_role_id: string,
+  listing_id: string,
+  payload: DepositWasteToBankSampahDTO
+) => {
+  const listing_record = await find_waste_listing_by_id(listing_id);
+  if (!listing_record) {
+    throw new AppError('Listing limbah tidak ditemukan', 404, 'WASTE_LISTING_NOT_FOUND');
+  }
+
+  if (listing_record.seller_role_id !== seller_role_id) {
+    throw new AppError(
+      'Hanya pemilik listing limbah yang dapat mencatat penyetoran ke bank sampah',
+      403,
+      'UNAUTHORIZED_WASTE_SELLER'
+    );
+  }
+
+  const current_available = Number(listing_record.available_weight);
+  if (current_available <= 0) {
+    throw new AppError('Stok limbah pada listing ini sudah habis', 400, 'WASTE_ALREADY_EXHAUSTED');
+  }
+
+  const deposit_weight =
+    payload.weight_kg !== undefined && payload.weight_kg > 0
+      ? Math.min(payload.weight_kg, current_available)
+      : current_available;
+
+  const remaining_weight = Math.max(0, current_available - deposit_weight);
+  const new_status = remaining_weight <= 0 ? 'SOLD_OUT' : listing_record.listing_status;
+  const revenue = Math.max(0, payload.revenue_amount || 0);
+
+  const note_entry = `[Disetor ke ${payload.bank_sampah_name} • ${deposit_weight} kg • Hasil: Rp ${revenue.toLocaleString('id-ID')}]`;
+  const updated_notes = listing_record.notes
+    ? `${listing_record.notes}\n${note_entry}`
+    : note_entry;
+
+  // 1. Update stok dan status listing limbah di database (sehingga sisa stok limbah di marketplace terpotong)
+  const updated_listing = await update_waste_listing(listing_id, {
+    available_weight: String(remaining_weight),
+    listing_status: new_status,
+    notes: updated_notes,
+  });
+
+  const today_str = new Date().toISOString().slice(0, 10);
+  const pickup_code = `BS-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+  // 2. Catat transaksi limbah dengan status ACCEPTED_COMPLETED & SETTLED
+  // Transaksi ini langsung dihitung oleh dashboard UMKM sebagai pendapatan kas limbah dan bobot residu dialihkan
+  const created_transaction = await insert_waste_transaction({
+    listing_id: listing_record.id,
+    buyer_role_id: seller_role_id,
+    purchased_weight: String(deposit_weight),
+    total_amount: String(revenue),
+    fulfillment_status: 'ACCEPTED_COMPLETED',
+    payment_status: 'SETTLED',
+    pickup_date: today_str,
+    picked_up_at: new Date(),
+    pickup_code,
+  });
+
+  return {
+    transaction: created_transaction,
+    listing: updated_listing,
+    deposited_weight: deposit_weight,
+    remaining_weight,
+    revenue_earned: revenue,
+    bank_sampah_name: payload.bank_sampah_name,
+  };
+};
+

@@ -12,7 +12,11 @@ import {
   insert_consolidated_po,
   find_pools_past_cutoff_or_expired,
 } from '../../repositories/orders/procurement-pool-repositories.ts';
-import { update_commodity_by_id } from '../../repositories/products/supplier-catalog-repositories.ts';
+import {
+  find_commodity_by_id,
+  update_commodity_by_id,
+} from '../../repositories/products/supplier-catalog-repositories.ts';
+
 import {
   insert_procurement_order,
   find_order_by_participant_id,
@@ -180,9 +184,24 @@ export const evaluate_pool_cutoffs_service = async (): Promise<{ updated_count: 
   const expired_pools = await find_pools_past_cutoff_or_expired();
   for (const pool_item of expired_pools) {
     await update_procurement_pool(pool_item.id, { pool_status: 'FAILED' });
+    const pool_accum = parseFloat(pool_item.accumulated_qty || '0');
+    if (pool_accum > 0 && pool_item.commodity_id) {
+      try {
+        const commodity = await find_commodity_by_id(pool_item.commodity_id);
+        if (commodity) {
+          const current_res = parseFloat(commodity.reserved_stock || '0');
+          await update_commodity_by_id(commodity.id, {
+            reserved_stock: String(Math.max(0, current_res - pool_accum)),
+          });
+        }
+      } catch (err) {
+        console.warn('[Release Reserved Stock on Pool Expiry Warning]:', err);
+      }
+    }
   }
   return { updated_count: expired_pools.length };
 };
+
 
 export const create_procurement_pool_service = async (
   payload: CreateProcurementPoolDTO
@@ -474,6 +493,14 @@ export const join_procurement_pool_service = async (
     active_participant = await insert_pool_participant(participant_payload as any);
   }
 
+  // 5.b. Real-time soft stock reservation: langsung sesuaikan reserved_stock komoditas supplier
+  if (delta_qty !== 0) {
+    const new_reserved_stock = Math.max(0, reserved_stock + delta_qty);
+    await update_commodity_by_id(commodity.id, {
+      reserved_stock: String(new_reserved_stock),
+    });
+  }
+
   // 6. Akumulasi kuantitas baru dan tentukan harga tier komoditas
   const current_accumulated = parseFloat(pool.accumulated_qty || '0');
   const new_accumulated = Math.max(0, current_accumulated + delta_qty);
@@ -516,7 +543,8 @@ export const join_procurement_pool_service = async (
     estimated_delivery_date: final_delivery_date,
   });
 
-  // 8. Jika target terpenuhi (LOCKED), buatkan otomatis Consolidated PO untuk Supplier & cadangkan stok
+  // 8. Jika target terpenuhi (LOCKED), buatkan otomatis Consolidated PO untuk Supplier
+  // (Catatan: stok komoditas sudah dicadangkan secara real-time via soft stock reservation di atas)
   if (is_target_met) {
     const existing_po = await find_consolidated_po_by_pool_id(pool.id);
     if (!existing_po) {
@@ -528,15 +556,11 @@ export const join_procurement_pool_service = async (
         po_status: 'ISSUED',
         delivery_date: final_delivery_date,
       });
-
-      // Cadangkan stok pada komoditas supplier
-      await update_commodity_by_id(commodity.id, {
-        reserved_stock: String(reserved_stock + new_accumulated),
-      });
     }
 
     // Hitung dan update biaya ongkir Hemat Hub berdasarkan aturan pembagian biaya
     await calculate_hemat_hub_shipping_costs(pool.id);
+
 
     // Sinkronisasi harga terkunci dan shipping fee untuk semua pesanan partisipan sebelumnya di pool ini
     const all_participants = await find_participants_by_pool_id(pool.id);
