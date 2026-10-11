@@ -3,6 +3,7 @@ import {
   buy_waste_listing,
   confirm_waste_pickup,
   create_waste_listing,
+  deposit_waste_to_bank_sampah,
   get_buyer_waste_transactions,
   get_nearest_offtakers,
   get_seller_waste_transactions,
@@ -15,8 +16,10 @@ import {
   buy_waste_validation,
   confirm_pickup_validation,
   create_waste_listing_validation,
+  deposit_waste_to_bank_sampah_validation,
   offtaker_referral_validation,
 } from '../../validations/waste/waste-validation.ts';
+
 
 const router = Router();
 
@@ -313,4 +316,52 @@ router.post(
   refer_listing_to_offtaker
 );
 
+/**
+ * @swagger
+ * /api/waste-listings/{id}/bank-sampah:
+ *   post:
+ *     summary: Konfirmasi & catat penjualan limbah ke Bank Sampah / TPS3R (mempengaruhi kas dan dashboard)
+ *     tags: [Waste Exchange]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - bank_sampah_name
+ *               - revenue_amount
+ *             properties:
+ *               bank_sampah_name:
+ *                 type: string
+ *                 example: Bank Sampah Gemah Ripah
+ *               revenue_amount:
+ *                 type: number
+ *                 example: 75000
+ *               weight_kg:
+ *                 type: number
+ *                 example: 25
+ *               notes:
+ *                 type: string
+ *                 example: Setor dalam wadah jeriken tertutup
+ *     responses:
+ *       200:
+ *         description: Penjualan limbah berhasil dicatat, stok terpotong, dan pendapatan masuk ke pembukuan kas dashboard
+ */
+router.post(
+  '/:id/bank-sampah',
+  authenticate_jwt,
+  deposit_waste_to_bank_sampah_validation,
+  deposit_waste_to_bank_sampah
+);
+
 export default router;
+

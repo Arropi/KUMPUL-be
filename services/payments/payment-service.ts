@@ -20,10 +20,12 @@ import {
 } from '../../repositories/orders/procurement-pool-repositories.ts';
 import {
   find_waste_transaction_by_midtrans_order_id,
+  find_waste_transaction_by_id,
   update_waste_transaction,
   find_waste_listing_by_id,
   update_waste_listing,
 } from '../../repositories/waste/waste-repositories.ts';
+
 import {
   create_snap_transaction,
   verify_midtrans_signature,
@@ -274,8 +276,39 @@ export const check_and_sync_payment_status_service = async (
 ): Promise<PaymentStatusResponse> => {
   const latest_tx = await find_latest_payment_transaction_by_order_id(order_id);
   if (!latest_tx) {
+    const waste_tx = await find_waste_transaction_by_id(order_id);
+    if (waste_tx && waste_tx.midtrans_order_id) {
+      const midtrans_status = await check_midtrans_transaction_status(waste_tx.midtrans_order_id);
+      const status = midtrans_status.transaction_status;
+      const fraud = midtrans_status.fraud_status;
+      const is_settled =
+        status === 'settlement' || (status === 'capture' && fraud === 'accept');
+
+      if (is_settled) {
+        await update_waste_transaction(waste_tx.id, {
+          payment_status: 'SETTLED',
+          fulfillment_status: 'PAID_HELD_IN_ESCROW',
+        });
+        try {
+          await update_escrow_status(waste_tx.id, 'HELD');
+        } catch {}
+      }
+
+      return {
+        order_id: waste_tx.id,
+        midtrans_order_id: waste_tx.midtrans_order_id,
+        transaction_status: status,
+        payment_status: is_settled ? 'SETTLED' : waste_tx.payment_status,
+        payment_type: midtrans_status.payment_type,
+        gross_amount: waste_tx.total_amount,
+        settlement_time: midtrans_status.settlement_time ?? null,
+        escrow_status: is_settled ? 'HELD' : null,
+      };
+    }
+
     throw new AppError('Belum ada transaksi pembayaran yang dibuat untuk pesanan ini', 404, 'PAYMENT_NOT_INITIALIZED');
   }
+
 
   const midtrans_status = await check_midtrans_transaction_status(latest_tx.midtrans_order_id);
 
@@ -380,11 +413,29 @@ export const evaluate_expired_orders_service = async () => {
 
 export const simulate_sandbox_payment_service = async (order_id: string) => {
   const order_data = await find_order_with_details_by_id(order_id);
+  const settlement_date = new Date();
+
   if (!order_data) {
+    // Cek apakah order_id merujuk pada transaksi limbah (Waste Transaction)
+    const waste_tx = await find_waste_transaction_by_id(order_id);
+    if (waste_tx) {
+      await update_waste_transaction(waste_tx.id, {
+        payment_status: 'SETTLED',
+        fulfillment_status: 'PAID_HELD_IN_ESCROW',
+      });
+      try {
+        await update_escrow_status(waste_tx.id, 'HELD');
+      } catch {}
+
+      return {
+        order_id: waste_tx.id,
+        payment_status: 'SETTLED',
+        settlement_time: settlement_date.toISOString(),
+      };
+    }
+
     throw new AppError('Pesanan pengadaan tidak ditemukan', 404, 'ORDER_NOT_FOUND');
   }
-
-  const settlement_date = new Date();
 
   await update_order_payment_status(
     order_id,
@@ -419,3 +470,4 @@ export const simulate_sandbox_payment_service = async (order_id: string) => {
     settlement_time: settlement_date.toISOString(),
   };
 };
+
