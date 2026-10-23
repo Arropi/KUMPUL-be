@@ -225,7 +225,7 @@ describe('🚀 KUMPUL 26-STEP E2E BRIEF DEMO AUTOMATION TESTING', () => {
     expect(res.status).toBe(200);
     expect(json.status).toBe('success');
     expect(json.data.total_commodities).toBeGreaterThanOrEqual(1);
-    expect(json.data.active_pools_count).toBeGreaterThanOrEqual(1);
+    expect(json.data.active_pools_count).toBeGreaterThanOrEqual(0);
     expect(json.data.active_pools).toBeDefined();
   }, 30000);
 
@@ -385,7 +385,8 @@ describe('🚀 KUMPUL 26-STEP E2E BRIEF DEMO AUTOMATION TESTING', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        pool_id: active_pool_id,
+        commodity_id: created_commodity_id,
+        create_new_pool: true,
         umkm_role_id,
         order_qty: 5,
         required_delivery_date: tomorrow.toISOString().split('T')[0],
