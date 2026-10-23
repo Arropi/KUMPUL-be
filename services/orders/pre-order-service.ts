@@ -2,6 +2,7 @@ import {
   find_pool_by_id,
   find_pools_by_status,
   find_participants_by_pool_id,
+  find_participants_by_pool_ids,
   find_consolidated_po_by_pool_id,
   find_commodity_with_tiers_by_id,
   find_business_role_by_id,
@@ -23,7 +24,7 @@ import {
   update_procurement_order,
 } from '../../repositories/orders/procurement-order-repositories.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
-import { poolCutoffGate, invalidate_pool_cache } from '../../utils/cache-utils.ts';
+import { poolCutoffGate, invalidate_pool_cache, poolListCache, invalidate_pool_list_cache } from '../../utils/cache-utils.ts';
 import type {
   CreateProcurementPoolDTO,
   JoinProcurementPoolDTO,
@@ -250,6 +251,7 @@ export const create_procurement_pool_service = async (
 
   const created_pool = await insert_procurement_pool(insert_payload);
   invalidate_pool_cache();
+  invalidate_pool_list_cache();
   return created_pool;
 };
 
@@ -259,18 +261,24 @@ export const list_procurement_pools_service = async (
   offset_count = 0,
   commodity_id?: string
 ): Promise<Array<ProcurementPoolRecord & { participants: PoolParticipantWithUmkm[] }>> => {
+  const cache_key = `pool_list_${status || 'ALL'}_${limit_count}_${offset_count}_${commodity_id || ''}`;
+  if (poolListCache.has(cache_key)) {
+    return poolListCache.get(cache_key);
+  }
+
   // Evaluasi otomatis cut-off pool
   await evaluate_pool_cutoffs_service();
   const pools = await find_pools_by_status(status, limit_count, offset_count, commodity_id);
-  const poolsWithParticipants = await Promise.all(
-    pools.map(async (pool) => {
-      const participants = await find_participants_by_pool_id(pool.id);
-      return {
-        ...pool,
-        participants,
-      };
-    })
-  );
+  if (pools.length === 0) {
+    return [];
+  }
+  const pool_ids = pools.map((p) => p.id);
+  const participants_map = await find_participants_by_pool_ids(pool_ids);
+  const poolsWithParticipants = pools.map((pool) => ({
+    ...pool,
+    participants: participants_map[pool.id] || [],
+  }));
+  poolListCache.set(cache_key, poolsWithParticipants);
   return poolsWithParticipants;
 };
 

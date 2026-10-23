@@ -12,6 +12,7 @@ import {
 import {
   find_participant_by_id,
   find_participants_by_pool_id,
+  find_participants_by_pool_ids,
   find_pool_by_id,
   update_procurement_pool,
   update_pool_participant,
@@ -241,20 +242,23 @@ export const get_umkm_all_orders_service = async (umkm_role_id: string) => {
   const pool_ids = Array.from(new Set(raw_orders.map((o) => o.pool_id).filter(Boolean)));
   const participants_by_pool = new Map<string, any[]>();
 
-  for (const pid of pool_ids) {
+  if (pool_ids.length > 0) {
     try {
-      const parts = await find_participants_by_pool_id(pid);
-      participants_by_pool.set(
-        pid,
-        parts.map((p) => ({
-          id: p.id,
-          name: p.umkm_name || 'UMKM Mitra',
-          city: p.entity_address?.split(',')[0] || 'Kota Pemesan',
-          qty: parseFloat(p.order_qty),
-          deliveryMethod: p.delivery_method,
-          isHost: p.umkm_role_id === p.pool_id, // fallback
-        }))
-      );
+      const batched_participants = await find_participants_by_pool_ids(pool_ids);
+      for (const pid of pool_ids) {
+        const parts = batched_participants[pid] || [];
+        participants_by_pool.set(
+          pid,
+          parts.map((p) => ({
+            id: p.id,
+            name: p.umkm_name || 'UMKM Mitra',
+            city: p.entity_address?.split(',')[0] || 'Kota Pemesan',
+            qty: parseFloat(p.order_qty),
+            deliveryMethod: p.delivery_method,
+            isHost: p.umkm_role_id === p.pool_id,
+          }))
+        );
+      }
     } catch {
       // Abaikan jika query partisipan gagal
     }

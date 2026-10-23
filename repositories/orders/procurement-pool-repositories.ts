@@ -205,6 +205,50 @@ export const find_participants_by_pool_id = async (
 
   return records as PoolParticipantWithUmkm[];
 };
+export const find_participants_by_pool_ids = async (
+  pool_ids: string[]
+): Promise<Record<string, PoolParticipantWithUmkm[]>> => {
+  if (pool_ids.length === 0) {
+    return {};
+  }
+  const records = await db
+    .select({
+      id: pool_participants.id,
+      pool_id: pool_participants.pool_id,
+      umkm_role_id: pool_participants.umkm_role_id,
+      order_qty: pool_participants.order_qty,
+      delivery_method: pool_participants.delivery_method,
+      required_delivery_date: pool_participants.required_delivery_date,
+      is_urgent_asap: pool_participants.is_urgent_asap,
+      final_delivery_address: pool_participants.final_delivery_address,
+      final_delivery_lat: pool_participants.final_delivery_lat,
+      final_delivery_lng: pool_participants.final_delivery_lng,
+      allocated_shipping_fee: pool_participants.allocated_shipping_fee,
+      pickup_code: pool_participants.pickup_code,
+      is_picked_up: pool_participants.is_picked_up,
+      picked_up_at: pool_participants.picked_up_at,
+      created_at: pool_participants.created_at,
+      umkm_name: business_entities.legal_name,
+      entity_address: business_entities.default_address,
+      storage_capacity: business_roles.storage_capacity,
+      phone_number: business_entities.phone_number,
+    })
+    .from(pool_participants)
+    .leftJoin(business_roles, eq(pool_participants.umkm_role_id, business_roles.id))
+    .leftJoin(business_entities, eq(business_roles.entity_id, business_entities.id))
+    .where(inArray(pool_participants.pool_id, pool_ids))
+    .orderBy(desc(pool_participants.created_at));
+
+  const result: Record<string, PoolParticipantWithUmkm[]> = {};
+  for (const pid of pool_ids) {
+    result[pid] = [];
+  }
+  for (const rec of records) {
+    result[rec.pool_id]?.push(rec as PoolParticipantWithUmkm);
+  }
+  return result;
+};
+
 
 export const find_participants_by_umkm_role = async (
   umkm_role_id: string

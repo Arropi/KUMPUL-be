@@ -54,6 +54,30 @@ export const orderPoCache = new LRUCache<string, any>({
   ttl: 60 * 1000, // 60 detik
 });
 
+// 8. profileCache: Cache profil entitas & roles (TTL 5 menit)
+export const profileCache = new LRUCache<string, any>({
+  max: 300,
+  ttl: 5 * 60 * 1000, // 5 menit
+});
+
+// 9. recommendationsCache: Cache rekomendasi cerdas UMKM & Supplier (TTL 60 detik)
+export const recommendationsCache = new LRUCache<string, any>({
+  max: 200,
+  ttl: 60 * 1000, // 60 detik
+});
+
+// 10. wasteListingCache: Cache bursa listing limbah sirkular (TTL 45 detik)
+export const wasteListingCache = new LRUCache<string, any>({
+  max: 200,
+  ttl: 45 * 1000, // 45 detik
+});
+
+// 11. poolListCache: Cache daftar procurement pools (TTL 30 detik)
+export const poolListCache = new LRUCache<string, any>({
+  max: 100,
+  ttl: 30 * 1000, // 30 detik
+});
+
 /**
  * EVENT-DRIVEN CACHE INVALIDATION HELPERS
  * Dipanggil otomatis saat mutasi data terjadi agar cache tetap konsisten (ACID compliant).
@@ -86,9 +110,10 @@ export const invalidate_pool_cache = (pool_id?: string): void => {
   } else {
     poolCutoffGate.clear();
   }
-  // Mutasi pool mempengaruhi katalog marketplace & dashboard
+  // Mutasi pool mempengaruhi katalog marketplace, pool list, dan rekomendasi
   invalidate_marketplace_cache();
-  dashboardCache.clear();
+  poolListCache.clear();
+  recommendationsCache.clear();
 };
 
 export const invalidate_order_po_cache = (po_id?: string): void => {
@@ -113,6 +138,40 @@ export const invalidate_auth_role_cache = (key?: string): void => {
   }
 };
 
+export const invalidate_profile_cache = (entity_id?: string): void => {
+  if (entity_id) {
+    profileCache.delete(`profile_detail_${entity_id}`);
+    for (const key of profileCache.keys()) {
+      if (key.includes(entity_id) || key.startsWith('profile_list_')) {
+        profileCache.delete(key);
+      }
+    }
+  } else {
+    profileCache.clear();
+  }
+};
+
+export const invalidate_recommendations_cache = (): void => {
+  recommendationsCache.clear();
+};
+
+export const invalidate_waste_cache = (listing_id?: string): void => {
+  if (listing_id) {
+    wasteListingCache.delete(`waste_detail_${listing_id}`);
+    for (const key of wasteListingCache.keys()) {
+      if (key.startsWith('waste_listings_')) {
+        wasteListingCache.delete(key);
+      }
+    }
+  } else {
+    wasteListingCache.clear();
+  }
+};
+
+export const invalidate_pool_list_cache = (): void => {
+  poolListCache.clear();
+};
+
 export const invalidate_all_caches = (): void => {
   authRoleCache.clear();
   marketplaceCache.clear();
@@ -121,4 +180,8 @@ export const invalidate_all_caches = (): void => {
   poolCutoffGate.clear();
   aiDocumentCache.clear();
   orderPoCache.clear();
+  profileCache.clear();
+  recommendationsCache.clear();
+  wasteListingCache.clear();
+  poolListCache.clear();
 };

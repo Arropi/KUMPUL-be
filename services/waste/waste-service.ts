@@ -17,7 +17,7 @@ import {
   update_waste_transaction,
 } from '../../repositories/waste/waste-repositories.ts';
 import { create_snap_transaction } from '../payments/midtrans-service.ts';
-import { offtakerCache, invalidate_dashboard_cache } from '../../utils/cache-utils.ts';
+import { offtakerCache, invalidate_dashboard_cache, wasteListingCache, invalidate_waste_cache } from '../../utils/cache-utils.ts';
 import type { OfftakerDirectory } from '../../config/schema.ts';
 import type {
   BuyWasteListingDTO,
@@ -69,19 +69,30 @@ export const create_waste_listing_service = async (
     is_marketplace_visible: payload.is_marketplace_visible ?? true,
     listing_status: 'AVAILABLE',
   });
-
+  invalidate_waste_cache();
   return created_listing;
 };
 
 export const get_waste_listings_service = async (filter: WasteListingFilterDTO) => {
-  return await find_waste_listings_with_filter(filter);
+  const cache_key = `waste_listings_${JSON.stringify(filter)}`;
+  if (wasteListingCache.has(cache_key)) {
+    return wasteListingCache.get(cache_key);
+  }
+  const result = await find_waste_listings_with_filter(filter);
+  wasteListingCache.set(cache_key, result);
+  return result;
 };
 
 export const get_waste_listing_detail_service = async (listing_id: string) => {
+  const cache_key = `waste_detail_${listing_id}`;
+  if (wasteListingCache.has(cache_key)) {
+    return wasteListingCache.get(cache_key);
+  }
   const listing_record = await find_waste_listing_by_id(listing_id);
   if (!listing_record) {
     throw new AppError('Listing limbah tidak ditemukan', 404, 'WASTE_LISTING_NOT_FOUND');
   }
+  wasteListingCache.set(cache_key, listing_record);
   return listing_record;
 };
 
@@ -164,7 +175,7 @@ export const buy_waste_listing_service = async (
     available_weight: String(remaining_weight),
     listing_status: remaining_weight <= 0 ? 'SOLD_OUT' : 'AVAILABLE',
   });
-
+  invalidate_waste_cache(listing_record.id);
   return created_transaction;
 };
 
@@ -373,7 +384,7 @@ export const deposit_waste_to_bank_sampah_service = async (
   });
 
   invalidate_dashboard_cache();
-
+  invalidate_waste_cache(listing_record.id);
   return {
     transaction: created_transaction,
     listing: updated_listing,

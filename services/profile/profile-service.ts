@@ -1,4 +1,5 @@
 import { AppError } from '../../middleware/error-middleware.ts';
+import { profileCache, invalidate_profile_cache, invalidate_auth_role_cache } from '../../utils/cache-utils.ts';
 import {
   find_entity_by_id,
   find_entity_by_id_or_auth_id,
@@ -14,6 +15,9 @@ import {
   count_entities,
   get_total_sales_by_entity_id,
   get_products_by_entity_id,
+  find_roles_by_entity_ids,
+  get_total_sales_by_entity_ids,
+  get_products_by_entity_ids,
   find_role_by_id,
   find_all_active_roles,
   delete_business_role_by_id,
@@ -174,7 +178,7 @@ export const create_profile_service = async (
     storage_capacity: payload.storage_capacity ?? 0,
     is_active: true,
   });
-
+  invalidate_profile_cache();
   return format_profile_response(created_entity, [initial_role]);
 };
 
@@ -184,6 +188,11 @@ export const create_profile_service = async (
 export const get_profile_by_id_service = async (
   identifier: string
 ): Promise<ProfileResponseDTO> => {
+  const cache_key = `profile_detail_${identifier}`;
+  if (profileCache.has(cache_key)) {
+    return profileCache.get(cache_key);
+  }
+
   const found_entity = await find_entity_by_id_or_auth_id(identifier);
   if (!found_entity) {
     throw new AppError(
@@ -197,7 +206,12 @@ export const get_profile_by_id_service = async (
   const total_sales = await get_total_sales_by_entity_id(found_entity.id);
   const products = await get_products_by_entity_id(found_entity.id);
 
-  return format_profile_response(found_entity, roles, total_sales, products);
+  const result = format_profile_response(found_entity, roles, total_sales, products);
+  profileCache.set(cache_key, result);
+  if (found_entity.id !== identifier) {
+    profileCache.set(`profile_detail_${found_entity.id}`, result);
+  }
+  return result;
 };
 
 /**
@@ -290,6 +304,7 @@ export const update_profile_service = async (
   const total_sales = await get_total_sales_by_entity_id(entity_id);
   const products = await get_products_by_entity_id(entity_id);
 
+  invalidate_profile_cache(entity_id);
   return format_profile_response(updated_entity, refreshed_roles, total_sales, products);
 };
 
@@ -338,6 +353,8 @@ export const delete_profile_service = async (
         'DELETE_FAILED'
       );
     }
+    invalidate_profile_cache(entity_id);
+    invalidate_auth_role_cache();
   } catch (delete_error) {
     if (
       delete_error instanceof Error &&
@@ -389,6 +406,8 @@ export const create_role_service = async (payload: {
     is_active: payload.is_active ?? true,
   });
 
+  invalidate_profile_cache(payload.entity_id);
+  invalidate_auth_role_cache();
   return new_role;
 };
 
@@ -414,6 +433,8 @@ export const update_role_service = async (
     throw new AppError('Gagal memperbarui peran usaha', 500, 'UPDATE_ROLE_FAILED');
   }
 
+  invalidate_profile_cache(target_role.entity_id);
+  invalidate_auth_role_cache();
   return updated;
 };
 
@@ -449,6 +470,8 @@ export const delete_role_service = async (role_id: string): Promise<void> => {
     if (!is_deleted) {
       throw new AppError('Gagal menghapus peran usaha dari database', 500, 'DELETE_FAILED');
     }
+    invalidate_profile_cache(target_role.entity_id);
+    invalidate_auth_role_cache();
   } catch (delete_error) {
     if (
       delete_error instanceof Error &&
@@ -471,34 +494,57 @@ export const delete_role_service = async (role_id: string): Promise<void> => {
 export const list_profiles_service = async (
   filter: ProfileListFilterDTO
 ): Promise<PaginatedProfileResult> => {
+  const cache_key = `profile_list_${JSON.stringify(filter)}`;
+  if (profileCache.has(cache_key)) {
+    return profileCache.get(cache_key);
+  }
+
   const limit_num = filter.limit && filter.limit > 0 ? filter.limit : 20;
   const offset_num = filter.offset && filter.offset >= 0 ? filter.offset : 0;
-
   const [entities, total_count] = await Promise.all([
     find_entities_list(limit_num, offset_num, filter.search),
     count_entities(filter.search),
   ]);
 
-  // Fetch extra data for each entity in parallel
-  const entitiesWithExtra = await Promise.all(
-    entities.map(async (entity_record) => {
-      const roles = await find_roles_by_entity_id(entity_record.id);
-      const total_sales = await get_total_sales_by_entity_id(entity_record.id);
-      const products = await get_products_by_entity_id(entity_record.id);
-      return { entity: entity_record, roles, total_sales, products };
-    })
-  );
+  if (entities.length === 0) {
+    return {
+      total: total_count,
+      limit: limit_num,
+      offset: offset_num,
+      profiles: [],
+    };
+  }
 
-  const formatted_profiles = entitiesWithExtra.map(({ entity, roles, total_sales, products }) =>
-    format_profile_response(entity, roles, total_sales, products)
-  );
+  const entity_ids = entities.map((e) => e.id);
+  const [all_roles, sales_map, products_map] = await Promise.all([
+    find_roles_by_entity_ids(entity_ids),
+    get_total_sales_by_entity_ids(entity_ids),
+    get_products_by_entity_ids(entity_ids),
+  ]);
 
-  return {
+  const roles_by_entity: Record<string, BusinessRoleRecord[]> = {};
+  for (const id of entity_ids) {
+    roles_by_entity[id] = [];
+  }
+  for (const r of all_roles) {
+    roles_by_entity[r.entity_id]?.push(r);
+  }
+
+  const formatted_profiles = entities.map((entity) => {
+    const roles = roles_by_entity[entity.id] || [];
+    const total_sales = sales_map.get(entity.id) || 0;
+    const products = products_map.get(entity.id) || [];
+    return format_profile_response(entity, roles, total_sales, products);
+  });
+
+  const result = {
     total: total_count,
     limit: limit_num,
     offset: offset_num,
     profiles: formatted_profiles,
   };
+  profileCache.set(cache_key, result);
+  return result;
 };
 
 /**

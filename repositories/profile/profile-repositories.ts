@@ -412,6 +412,112 @@ export const get_products_by_entity_id = async (
 
   return products;
 };
+export const find_roles_by_entity_ids = async (
+  entity_ids: string[]
+): Promise<BusinessRoleRecord[]> => {
+  if (entity_ids.length === 0) {
+    return [];
+  }
+  return db
+    .select()
+    .from(business_roles)
+    .where(inArray(business_roles.entity_id, entity_ids));
+};
+
+export const get_total_sales_by_entity_ids = async (
+  entity_ids: string[]
+): Promise<Map<string, number>> => {
+  const map = new Map<string, number>();
+  if (entity_ids.length === 0) {
+    return map;
+  }
+  const rows = await db
+    .select({
+      entity_id: business_roles.entity_id,
+      total: sql<number>`COALESCE(SUM(${umkm_procurement_orders.grand_total}), 0)`,
+    })
+    .from(umkm_procurement_orders)
+    .innerJoin(
+      consolidated_pos,
+      eq(umkm_procurement_orders.participant_id, consolidated_pos.id)
+    )
+    .innerJoin(
+      business_roles,
+      eq(consolidated_pos.supplier_role_id, business_roles.id)
+    )
+    .where(inArray(business_roles.entity_id, entity_ids))
+    .groupBy(business_roles.entity_id);
+
+  for (const r of rows) {
+    map.set(r.entity_id, Number(r.total));
+  }
+  return map;
+};
+
+export const get_products_by_entity_ids = async (
+  entity_ids: string[]
+): Promise<Map<string, ProductDTO[]>> => {
+  const map = new Map<string, ProductDTO[]>();
+  if (entity_ids.length === 0) {
+    return map;
+  }
+  for (const id of entity_ids) {
+    map.set(id, []);
+  }
+
+  const [supplierComm, umkmProd] = await Promise.all([
+    db
+      .select({
+        entity_id: business_roles.entity_id,
+        id: supplier_commodities.id,
+        name: supplier_commodities.name,
+        sku: supplier_commodities.sku,
+        base_price: supplier_commodities.base_price,
+        stock: supplier_commodities.stock,
+        unit: supplier_commodities.wholesale_unit,
+      })
+      .from(supplier_commodities)
+      .innerJoin(business_roles, eq(supplier_commodities.supplier_role_id, business_roles.id))
+      .where(inArray(business_roles.entity_id, entity_ids)),
+    db
+      .select({
+        entity_id: business_roles.entity_id,
+        id: umkm_products.id,
+        name: umkm_products.product_name,
+        sku: umkm_products.id,
+        base_price: umkm_products.target_selling_price_per_unit,
+        stock: umkm_products.expected_batch_units,
+        unit: umkm_products.unit,
+      })
+      .from(umkm_products)
+      .innerJoin(business_roles, eq(umkm_products.umkm_role_id, business_roles.id))
+      .where(inArray(business_roles.entity_id, entity_ids)),
+  ]);
+
+  for (const sc of supplierComm) {
+    map.get(sc.entity_id)?.push({
+      id: sc.id,
+      name: sc.name,
+      sku: sc.sku,
+      base_price: Number(sc.base_price),
+      stock: Number(sc.stock),
+      unit: sc.unit,
+    });
+  }
+  for (const up of umkmProd) {
+    map.get(up.entity_id)?.push({
+      id: up.id,
+      name: up.name,
+      sku: up.sku ?? '',
+      base_price: Number(up.base_price),
+      stock: Number(up.stock),
+      unit: up.unit,
+    });
+  }
+
+  return map;
+};
+
 
 export const find_role_by_id = async (
   role_id: string

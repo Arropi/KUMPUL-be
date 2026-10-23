@@ -18,7 +18,7 @@ import type {
   SupplierRecommendationResponse,
   UMKMRecommendationResponse,
 } from '../../types/marketplace-types.ts';
-import { marketplaceCache } from '../../utils/cache-utils.ts';
+import { marketplaceCache, recommendationsCache } from '../../utils/cache-utils.ts';
 
 export const get_marketplace_catalog_service = async (
   filter: MarketplaceFilterDTO
@@ -97,6 +97,11 @@ export const get_marketplace_recommendations_service = async (
   entity_id?: string | null | undefined,
   role_ids?: string[]
 ): Promise<UMKMRecommendationResponse | SupplierRecommendationResponse> => {
+  const cache_key = `recs_${role_id || 'anon'}_${role_type}_${entity_id || ''}_${(role_ids || []).slice().sort().join(',')}`;
+  if (recommendationsCache.has(cache_key)) {
+    return recommendationsCache.get(cache_key);
+  }
+
   let low_stocks = (role_id && role_type === 'UMKM') ? await find_umkm_low_stock_records(role_id) : [];
   if (low_stocks.length === 0) {
     low_stocks = [
@@ -186,6 +191,7 @@ export const get_marketplace_recommendations_service = async (
       circular_waste_matches,
       cost_saving_active_pools,
     };
+    recommendationsCache.set(cache_key, umkm_response);
     return umkm_response;
   }
 
@@ -202,5 +208,6 @@ export const get_marketplace_recommendations_service = async (
     cost_saving_active_pools,
   };
 
+  recommendationsCache.set(cache_key, supplier_response);
   return supplier_response;
 };
