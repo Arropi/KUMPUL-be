@@ -457,7 +457,16 @@ export const join_procurement_pool_service = async (
     throw new AppError('Sisa kuota stok komoditas supplier tidak mencukupi', 400, 'INSUFFICIENT_STOCK');
   }
 
-  // 4. Kalkulasi alokasi ongkos kirim (jika sudah dipilih)
+  // 4. Validasi metode pengiriman & kalkulasi alokasi ongkos kirim awal
+  const is_direct_order = order_qty_num >= parseFloat(commodity.base_moq);
+  if (is_direct_order && payload.delivery_method === 'HEMAT_HUB') {
+    throw new AppError(
+      'Metode pengiriman Hemat Hub hanya dapat dipilih untuk pesanan di bawah batas MOQ. Pesanan mandiri (>= MOQ) wajib menggunakan Direct Door to Door.',
+      400,
+      'HEMAT_HUB_NOT_ALLOWED_FOR_DIRECT_ORDER'
+    );
+  }
+
   const allocated_shipping = payload.delivery_method
     ? calculate_allocated_shipping(payload.delivery_method)
     : 0;

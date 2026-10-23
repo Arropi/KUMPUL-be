@@ -31,7 +31,10 @@ import {
   verify_midtrans_signature,
   check_midtrans_transaction_status,
 } from './midtrans-service.ts';
-import { calculate_allocated_shipping } from '../orders/pre-order-service.ts';
+import {
+  calculate_allocated_shipping,
+  calculate_hemat_hub_shipping_costs,
+} from '../orders/pre-order-service.ts';
 import { deduct_commodity_stock_on_order_fulfillment } from '../orders/procurement-order-service.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
 import type {
@@ -53,20 +56,35 @@ export const initiate_order_payment_service = async (
   if (order_data.order.payment_status === 'SETTLED') {
     throw new AppError('Pesanan ini sudah berhasil dibayar', 400, 'ORDER_ALREADY_PAID');
   }
-
-  // Update delivery method dan recalculate shipping fee jika ditentukan saat checkout
+  // Tentukan metode pengiriman efektif dan tarif ongkir saat ini
   const effective_delivery_method = delivery_method ?? order_data.participant.delivery_method;
   let current_shipping_fee = parseFloat(order_data.order.shipping_fee || '0');
   let current_grand_total = parseFloat(order_data.order.grand_total);
 
-  if (delivery_method || (!order_data.participant.delivery_method && effective_delivery_method)) {
-    if (effective_delivery_method) {
-      current_shipping_fee = calculate_allocated_shipping(effective_delivery_method);
+  // Validasi: Metode Hemat Hub dilarang untuk pesanan mandiri yang telah memenuhi MOQ
+  const is_over_moq =
+    parseFloat(order_data.participant.order_qty || '0') >=
+    parseFloat(order_data.commodity.base_moq || '0');
+  if (effective_delivery_method === 'HEMAT_HUB' && is_over_moq) {
+    throw new AppError(
+      'Metode pengiriman Hemat Hub hanya dapat dipilih untuk pesanan di bawah batas MOQ',
+      400,
+      'HEMAT_HUB_NOT_ALLOWED_FOR_DIRECT_ORDER'
+    );
+  }
+
+  // Update delivery method dan recalculate shipping fee jika ditentukan/diubah saat checkout
+  const method_changed = Boolean(delivery_method && delivery_method !== order_data.participant.delivery_method);
+  const initial_method_set = Boolean(!order_data.participant.delivery_method && effective_delivery_method);
+
+  if (method_changed || initial_method_set) {
+    if (effective_delivery_method === 'DIRECT_DOOR_TO_DOOR') {
+      current_shipping_fee = 35000;
       const raw_subtotal = parseFloat(order_data.order.raw_material_subtotal);
       current_grand_total = raw_subtotal + current_shipping_fee;
 
       await update_pool_participant(order_data.participant.id, {
-        delivery_method: effective_delivery_method,
+        delivery_method: 'DIRECT_DOOR_TO_DOOR',
         allocated_shipping_fee: String(current_shipping_fee),
       });
 
@@ -75,9 +93,29 @@ export const initiate_order_payment_service = async (
         grand_total: String(current_grand_total),
       });
 
-      order_data.participant.delivery_method = effective_delivery_method;
+      order_data.participant.delivery_method = 'DIRECT_DOOR_TO_DOOR';
       order_data.order.shipping_fee = String(current_shipping_fee);
       order_data.order.grand_total = String(current_grand_total);
+
+      // Hitung ulang pembagian biaya Hemat Hub bagi peserta lain yang tersisa di pool
+      await calculate_hemat_hub_shipping_costs(order_data.pool.id);
+    } else if (effective_delivery_method === 'HEMAT_HUB') {
+      await update_pool_participant(order_data.participant.id, {
+        delivery_method: 'HEMAT_HUB',
+        allocated_shipping_fee: '15000',
+      });
+
+      // Hitung ulang pembagian ongkir Hemat Hub dinamis termasuk peserta/host ini
+      await calculate_hemat_hub_shipping_costs(order_data.pool.id);
+
+      const refreshed_order = await find_order_with_details_by_id(order_id);
+      if (refreshed_order) {
+        current_shipping_fee = parseFloat(refreshed_order.order.shipping_fee || '0');
+        current_grand_total = parseFloat(refreshed_order.order.grand_total);
+        order_data.participant.delivery_method = 'HEMAT_HUB';
+        order_data.order.shipping_fee = String(current_shipping_fee);
+        order_data.order.grand_total = String(current_grand_total);
+      }
     }
   }
 
