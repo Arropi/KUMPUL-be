@@ -32,6 +32,7 @@ import { umkm_inventory_stocks } from '../../config/schema.ts';
 import { eq, and, sql } from 'drizzle-orm';
 import { calculate_hemat_hub_shipping_costs } from './pre-order-service.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
+import { orderPoCache, invalidate_order_po_cache } from '../../utils/cache-utils.ts';
 import type {
   CreateProcurementOrderDTO,
   UmkmProcurementOrderRecord,
@@ -538,7 +539,7 @@ export const ship_supplier_po_service = async (
     tracking_number: payload.tracking_number,
     delivery_proof_url: payload.delivery_proof_url ?? null,
   });
-
+  invalidate_order_po_cache(po_id);
   return updated_po;
 };
 
@@ -547,9 +548,13 @@ export const list_supplier_pos_service = async (
   limit_count = 20,
   offset_count = 0
 ) => {
+  const cache_key = `pos_${supplier_role_id}_${limit_count}_${offset_count}`;
+  if (orderPoCache.has(cache_key)) {
+    return orderPoCache.get(cache_key);
+  }
   const records = await find_consolidated_pos_by_supplier(supplier_role_id, limit_count, offset_count);
 
-  return records.map((po) => {
+  const result = records.map((po) => {
     const totalQty = parseFloat(po.total_quantity || '0');
     const grandTotal = parseFloat(po.total_amount || '0');
     const lockedPrice = totalQty > 0 ? Math.round(grandTotal / totalQty) : 0;
@@ -598,6 +603,8 @@ export const list_supplier_pos_service = async (
       participants: [],
     };
   });
+  orderPoCache.set(cache_key, result);
+  return result;
 };
 
 export const get_supplier_po_detail_service = async (po_id: string) => {
@@ -714,6 +721,6 @@ export const update_supplier_po_status_service = async (
       console.warn('[PO Delivered Stock Deduction Warning]:', err);
     }
   }
-
+  invalidate_order_po_cache(po_id);
   return updated_po;
 };

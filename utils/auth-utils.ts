@@ -6,6 +6,7 @@ import {
   find_entity_by_auth_user_id,
 } from '../repositories/profile/profile-repositories.ts';
 import type { RoleType } from '../types/profile-types.ts';
+import { authRoleCache } from './cache-utils.ts';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -24,6 +25,10 @@ export const get_authenticated_role_id = async (
     return direct_role_id;
   }
 
+  const cache_key = `${req.user?.auth_user_id || req.user?.sub || ''}_${req.user?.entity_id || ''}_${expected_role || ''}`;
+  if (cache_key.length > 2 && authRoleCache.has(cache_key)) {
+    return authRoleCache.get(cache_key)!;
+  }
   let entity_id = req.user?.entity_id;
 
   // Jika entity_id belum ada di req.user, coba cari berdasarkan auth_user_id / user_id / sub
@@ -51,6 +56,7 @@ export const get_authenticated_role_id = async (
     if (target_role) {
       const role_record = await find_active_role_by_entity_and_type(entity_id, target_role);
       if (role_record) {
+        authRoleCache.set(cache_key, role_record.id);
         return role_record.id;
       }
     }
@@ -59,6 +65,7 @@ export const get_authenticated_role_id = async (
     const entity_roles = await find_roles_by_entity_id(entity_id);
     const active_role = entity_roles.find((r) => r.is_active && (!expected_role || r.role_type === expected_role));
     if (active_role) {
+      authRoleCache.set(cache_key, active_role.id);
       return active_role.id;
     }
   }

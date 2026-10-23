@@ -23,6 +23,7 @@ import {
   update_procurement_order,
 } from '../../repositories/orders/procurement-order-repositories.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
+import { poolCutoffGate, invalidate_pool_cache } from '../../utils/cache-utils.ts';
 import type {
   CreateProcurementPoolDTO,
   JoinProcurementPoolDTO,
@@ -181,6 +182,10 @@ export const calculate_hemat_hub_shipping_costs = async (
 };
 
 export const evaluate_pool_cutoffs_service = async (): Promise<{ updated_count: number }> => {
+  if (poolCutoffGate.has('last_cutoff_check')) {
+    return { updated_count: 0 };
+  }
+  poolCutoffGate.set('last_cutoff_check', true);
   const expired_pools = await find_pools_past_cutoff_or_expired();
   for (const pool_item of expired_pools) {
     await update_procurement_pool(pool_item.id, { pool_status: 'FAILED' });
@@ -243,7 +248,9 @@ export const create_procurement_pool_service = async (
     hub_longitude: payload.hub_longitude !== undefined ? String(payload.hub_longitude) : null,
   };
 
-  return await insert_procurement_pool(insert_payload);
+  const created_pool = await insert_procurement_pool(insert_payload);
+  invalidate_pool_cache();
+  return created_pool;
 };
 
 export const list_procurement_pools_service = async (
@@ -270,6 +277,10 @@ export const list_procurement_pools_service = async (
 export const get_procurement_pool_by_id_service = async (
   pool_id: string
 ): Promise<PoolWithParticipants> => {
+  const cache_key = `pool_detail_${pool_id}`;
+  if (poolCutoffGate.has(cache_key)) {
+    return poolCutoffGate.get(cache_key);
+  }
   const pool = await find_pool_by_id(pool_id);
   if (!pool) {
     throw new AppError('Procurement pool tidak ditemukan', 404, 'POOL_NOT_FOUND');
@@ -279,13 +290,15 @@ export const get_procurement_pool_by_id_service = async (
   const consolidated_po = await find_consolidated_po_by_pool_id(pool_id);
   const commodity = await find_commodity_with_tiers_by_id(pool.commodity_id);
 
-  return {
+  const result = {
     ...pool,
     commodity_name: commodity?.name,
     wholesale_unit: commodity?.wholesale_unit,
     participants,
     consolidated_po,
   };
+  poolCutoffGate.set(cache_key, result);
+  return result;
 };
 
 export const join_procurement_pool_service = async (
@@ -621,6 +634,7 @@ export const join_procurement_pool_service = async (
     }
   }
 
+  invalidate_pool_cache(payload.pool_id);
   return {
     participant: refreshed_participant,
     pool: updated_pool ?? pool,

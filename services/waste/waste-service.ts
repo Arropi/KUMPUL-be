@@ -17,6 +17,8 @@ import {
   update_waste_transaction,
 } from '../../repositories/waste/waste-repositories.ts';
 import { create_snap_transaction } from '../payments/midtrans-service.ts';
+import { offtakerCache, invalidate_dashboard_cache } from '../../utils/cache-utils.ts';
+import type { OfftakerDirectory } from '../../config/schema.ts';
 import type {
   BuyWasteListingDTO,
   CreateWasteListingDTO,
@@ -228,7 +230,11 @@ export const get_nearest_offtakers_service = async (
     user_lon = 112.7758;
   }
 
-  const all_offtakers = await find_all_offtakers();
+  let all_offtakers = offtakerCache.get('all_offtakers') as OfftakerDirectory[] | undefined;
+  if (!all_offtakers) {
+    all_offtakers = await find_all_offtakers();
+    offtakerCache.set('all_offtakers', all_offtakers);
+  }
   const max_limit = query.limit && query.limit > 0 ? query.limit : 5;
 
   const offtakers_with_distance: NearestOfftakerResult[] = all_offtakers
@@ -365,6 +371,8 @@ export const deposit_waste_to_bank_sampah_service = async (
     picked_up_at: new Date(),
     pickup_code,
   });
+
+  invalidate_dashboard_cache();
 
   return {
     transaction: created_transaction,
