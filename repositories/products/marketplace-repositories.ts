@@ -100,6 +100,7 @@ export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO)
       storage_temperature_type: commodity_batch_tags.storage_temperature_type,
       is_batch_verified: commodity_batch_tags.is_verified,
       supporting_file_url: commodity_batch_tags.supporting_file_url,
+      batch_verification_notes: commodity_batch_tags.verification_notes,
     })
     .from(supplier_commodities)
     .innerJoin(business_roles, eq(supplier_commodities.supplier_role_id, business_roles.id))
@@ -208,6 +209,7 @@ export const find_marketplace_commodities = async (filter: MarketplaceFilterDTO)
             storage_temperature_type: c.storage_temperature_type!,
             is_verified: c.is_batch_verified!,
             supporting_file_url: c.supporting_file_url,
+            verification_notes: c.batch_verification_notes,
           }
         : null,
       active_pools: pools,
@@ -251,6 +253,7 @@ export const find_marketplace_commodity_by_id = async (commodity_id: string) => 
       storage_temperature_type: commodity_batch_tags.storage_temperature_type,
       is_batch_verified: commodity_batch_tags.is_verified,
       supporting_file_url: commodity_batch_tags.supporting_file_url,
+      batch_verification_notes: commodity_batch_tags.verification_notes,
     })
     .from(supplier_commodities)
     .innerJoin(business_roles, eq(supplier_commodities.supplier_role_id, business_roles.id))
@@ -327,6 +330,7 @@ export const find_marketplace_commodity_by_id = async (commodity_id: string) => 
           storage_temperature_type: c.storage_temperature_type!,
           is_verified: c.is_batch_verified!,
           supporting_file_url: c.supporting_file_url,
+          verification_notes: c.batch_verification_notes,
         }
       : null,
     active_pools: pools_data.map((p) => {

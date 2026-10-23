@@ -245,7 +245,7 @@ export const supplier_commodities = pgTable('supplier_commodities', {
     .notNull(),
   allows_under_moq: boolean('allows_under_moq').default(false).notNull(),
   under_moq_price_per_kg: numeric('under_moq_price_per_kg'),
-  is_marketplace_active: boolean('is_marketplace_active').default(true),
+  is_marketplace_active: boolean('is_marketplace_active').default(false),
   created_at: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });

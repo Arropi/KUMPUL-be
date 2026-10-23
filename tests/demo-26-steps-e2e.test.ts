@@ -201,10 +201,7 @@ describe('🚀 KUMPUL 26-STEP E2E BRIEF DEMO AUTOMATION TESTING', () => {
     expect(res.status).toBe(200);
     expect(json.status).toBe('success');
     expect(json.data.commodity.is_marketplace_active).toBe(true);
-    expect(json.data.procurement_pool).toBeDefined();
-    expect(json.data.procurement_pool.pool_status).toBe('OPEN');
-
-    active_pool_id = json.data.procurement_pool.id;
+    expect(json.data.procurement_pool).toBeNull();
   }, 30000);
 
   it('Tahap 7: Tunjukkan rekomendasi di marketplace via GET /api/supplier-catalogs/marketplace', async () => {
@@ -216,7 +213,7 @@ describe('🚀 KUMPUL 26-STEP E2E BRIEF DEMO AUTOMATION TESTING', () => {
     const target = json.data.find((c: any) => c.commodity.id === created_commodity_id);
     expect(target).toBeDefined();
     expect(target.commodity.is_marketplace_active).toBe(true);
-    expect(target.active_pool.id).toBe(active_pool_id);
+    expect(target.active_pool).toBeNull();
   }, 30000);
 
   it('Tahap 8: Buka dashboard Supplier via GET /api/dashboards/supplier', async () => {
@@ -409,12 +406,13 @@ describe('🚀 KUMPUL 26-STEP E2E BRIEF DEMO AUTOMATION TESTING', () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 3);
 
-    // Beli 20 Liter dengan opsi HEMAT_HUB (bergabung ke pool aktif)
+    // Beli 20 Liter dengan opsi HEMAT_HUB (buka pool baru mandiri)
     const joinRes = await fetch(`${BASE_URL}/api/pre-orders/join`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        pool_id: active_pool_id,
+        commodity_id: created_commodity_id,
+        create_new_pool: true,
         umkm_role_id,
         order_qty: 20,
         required_delivery_date: tomorrow.toISOString().split('T')[0],
@@ -428,6 +426,7 @@ describe('🚀 KUMPUL 26-STEP E2E BRIEF DEMO AUTOMATION TESTING', () => {
     const joinJson = (await joinRes.json()) as any;
     expect(joinRes.status).toBe(201);
     expect(joinJson.data.order_id).toBeDefined();
+    active_pool_id = joinJson.data.pool.id;
     order_3_id = joinJson.data.order_id;
   }, 30000);
 

@@ -20,6 +20,7 @@ import { generate_sku_from_name } from '../../utils/sku-utils.ts';
 import { format_and_validate_price_tiers } from '../../utils/tier-utils.ts';
 import {
   find_batch_tags_by_commodity_id,
+  find_batch_tags_by_commodity_ids,
   delete_batch_tags_by_commodity_id,
 } from '../../repositories/products/commodity-batch-tag-repositories.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
@@ -228,17 +229,23 @@ export const list_supplier_commodities_service = async (
   }
 
   const commodity_ids = commodities.map((item) => item.id);
-  const tiers_by_commodity = await find_price_tiers_by_commodity_ids(commodity_ids);
+  const [tiers_by_commodity, batch_tags_by_commodity] = await Promise.all([
+    find_price_tiers_by_commodity_ids(commodity_ids),
+    find_batch_tags_by_commodity_ids(commodity_ids),
+  ]);
 
   return commodities.map((commodity_item) => {
     const stock_num = parseFloat(commodity_item.stock || '0');
     const reserved_num = parseFloat(commodity_item.reserved_stock || '0');
     const available_stock = String(Math.max(0, stock_num - reserved_num));
+    const item_batch_tags = batch_tags_by_commodity[commodity_item.id] || [];
 
     return {
       ...commodity_item,
       available_stock,
       price_tiers: tiers_by_commodity[commodity_item.id] || [],
+      batch_tag: item_batch_tags[0] || null,
+      batch_tags: item_batch_tags,
     };
   });
 };
@@ -357,17 +364,23 @@ export const get_commodities_by_entity_id_service = async (
   }
 
   const commodity_ids = commodities.map((item) => item.id);
-  const tiers_by_commodity = await find_price_tiers_by_commodity_ids(commodity_ids);
+  const [tiers_by_commodity, batch_tags_by_commodity] = await Promise.all([
+    find_price_tiers_by_commodity_ids(commodity_ids),
+    find_batch_tags_by_commodity_ids(commodity_ids),
+  ]);
 
   return commodities.map((commodity_item) => {
     const stock_num = parseFloat(commodity_item.stock || '0');
     const reserved_num = parseFloat(commodity_item.reserved_stock || '0');
     const available_stock = String(Math.max(0, stock_num - reserved_num));
+    const item_batch_tags = batch_tags_by_commodity[commodity_item.id] || [];
 
     return {
       ...commodity_item,
       available_stock,
       price_tiers: tiers_by_commodity[commodity_item.id] || [],
+      batch_tag: item_batch_tags[0] || null,
+      batch_tags: item_batch_tags,
     };
   });
 };
