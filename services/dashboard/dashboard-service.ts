@@ -12,10 +12,15 @@ import type {
   SupplierDashboardSummary,
   UMKMDashboardSummary,
 } from '../../types/dashboard-types.ts';
+import { dashboardCache } from '../../utils/cache-utils.ts';
 
 export const get_supplier_dashboard_service = async (
   supplier_role_id: string
 ): Promise<SupplierDashboardSummary> => {
+  const cache_key = `supplier_dashboard_${supplier_role_id}`;
+  if (dashboardCache.has(cache_key)) {
+    return dashboardCache.get(cache_key);
+  }
   const [overview, active_pools, top_commodities, benchmarks] = await Promise.all([
     get_supplier_overview_stats(supplier_role_id),
     get_supplier_active_pools_list(supplier_role_id),
@@ -23,7 +28,7 @@ export const get_supplier_dashboard_service = async (
     find_market_price_benchmarks(supplier_role_id),
   ]);
 
-  return {
+  const result = {
     ...overview,
     active_pools,
     top_commodities,
@@ -34,11 +39,17 @@ export const get_supplier_dashboard_service = async (
       status: b.price_competitiveness,
     })),
   };
+  dashboardCache.set(cache_key, result);
+  return result;
 };
 
 export const get_umkm_dashboard_service = async (
   umkm_role_id: string
 ): Promise<UMKMDashboardSummary> => {
+  const cache_key = `umkm_dashboard_${umkm_role_id}`;
+  if (dashboardCache.has(cache_key)) {
+    return dashboardCache.get(cache_key);
+  }
   const [stats, inventory_data, recent_orders, recent_waste] = await Promise.all([
     get_umkm_procurement_stats(umkm_role_id),
     get_umkm_inventory_with_recipes(umkm_role_id),
@@ -96,7 +107,7 @@ export const get_umkm_dashboard_service = async (
     }
   }
 
-  return {
+  const result = {
     ...stats,
     kitchen_runout_alerts: runout_alerts.sort((a, b) => a.days_until_runout - b.days_until_runout),
     recent_orders: recent_orders.map((o) => ({
@@ -117,4 +128,6 @@ export const get_umkm_dashboard_service = async (
       listing_status: w.listing_status,
     })),
   };
+  dashboardCache.set(cache_key, result);
+  return result;
 };

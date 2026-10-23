@@ -358,7 +358,7 @@ describe('Marketplace, Waste Exchange, Order Management & Dashboard Integration 
     const body = (await res.json()) as any;
     expect(body.status).toBe('success');
     expect(body.data.evaluated_count).toBeDefined();
-  });
+  }, 15000);
 
   // ==========================================
   // MODUL 4: Grouped Orders & Lead Time

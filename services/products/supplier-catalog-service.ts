@@ -23,6 +23,7 @@ import {
   delete_batch_tags_by_commodity_id,
 } from '../../repositories/products/commodity-batch-tag-repositories.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
+import { invalidate_marketplace_cache } from '../../utils/cache-utils.ts';
 import type {
   CreateSupplierCommodityDTO,
   UpdateSupplierCommodityDTO,
@@ -172,7 +173,7 @@ export const create_supplier_commodity_service = async (
     }));
     created_price_tiers = await insert_commodity_price_tiers(tiers_payload);
   }
-
+  invalidate_marketplace_cache();
   return {
     ...created_commodity,
     price_tiers: created_price_tiers,
@@ -319,6 +320,7 @@ export const update_supplier_commodity_service = async (
     }
   }
 
+  invalidate_marketplace_cache();
   const latest_tiers = await find_price_tiers_by_commodity_id(commodity_id);
   return {
     ...updated_item,
@@ -338,6 +340,7 @@ export const delete_supplier_commodity_service = async (commodity_id: string): P
   if (!is_deleted) {
     throw new AppError('Gagal menghapus komoditas katalog', 500, 'DELETE_FAILED');
   }
+  invalidate_marketplace_cache();
 };
 
 export const get_commodities_by_entity_id_service = async (
