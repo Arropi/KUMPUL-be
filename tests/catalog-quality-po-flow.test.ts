@@ -183,11 +183,8 @@ describe('End-to-End Flow: Catalog Creation -> Quality/Mutu -> Publish -> PO Sys
     expect(res.status).toBe(200);
     expect(json.status).toBe('success');
     expect(json.data.commodity.is_marketplace_active).toBe(true);
-    expect(json.data.procurement_pool).toBeDefined();
-    expect(json.data.procurement_pool.pool_status).toBe('OPEN');
+    expect(json.data.procurement_pool).toBeNull();
     expect(json.data.quality_verification).toBeDefined();
-
-    active_pool_id = json.data.procurement_pool.id;
   }, 20000);
 
   it('5. GET /api/supplier-catalogs/marketplace - Menampilkan komoditas yang aktif di etalase publik', async () => {
@@ -201,7 +198,7 @@ describe('End-to-End Flow: Catalog Creation -> Quality/Mutu -> Publish -> PO Sys
     const target_item = json.data.find((item: any) => item.commodity.id === created_commodity_id);
     expect(target_item).toBeDefined();
     expect(target_item.commodity.available_stock).toBe('300');
-    expect(target_item.active_pool.id).toBe(active_pool_id);
+    expect(target_item.active_pool).toBeNull();
   }, 20000);
 
   // ==========================================
@@ -212,9 +209,10 @@ describe('End-to-End Flow: Catalog Creation -> Quality/Mutu -> Publish -> PO Sys
     tomorrow.setDate(tomorrow.getDate() + 3);
     const required_delivery_date = tomorrow.toISOString().split('T')[0];
 
-    // Memesan 50 KG (langsung memenuhi target MOQ 50 KG)
+    // Memesan 50 KG mandiri (langsung memenuhi target MOQ 50 KG)
     const join_payload = {
-      pool_id: active_pool_id,
+      commodity_id: created_commodity_id,
+      create_new_pool: true,
       umkm_role_id,
       order_qty: 50,
       required_delivery_date,
@@ -235,6 +233,7 @@ describe('End-to-End Flow: Catalog Creation -> Quality/Mutu -> Publish -> PO Sys
     expect(json.status).toBe('success');
     expect(json.data.pool.pool_status).toBe('LOCKED');
     expect(json.data.order_id).toBeDefined();
+    active_pool_id = json.data.pool.id;
   }, 20000);
 
   it('7. GET /api/orders/supplier/pos - Supplier melihat daftar Purchase Order (PO) konsolidasi yang diterbitkan', async () => {

@@ -12,7 +12,6 @@ import {
 import {
   find_active_pools_by_commodity_id,
   find_active_pools_by_commodity_ids,
-  insert_procurement_pool,
 } from '../../repositories/orders/procurement-pool-repositories.ts';
 import { AppError } from '../../middleware/error-middleware.ts';
 import type { SupplierCommodityRecord } from '../../types/supplier-catalog-types.ts';
@@ -27,7 +26,7 @@ export interface PublishCommodityResponse {
     verified_tags: number;
     tags: CommodityBatchTagRecord[];
   };
-  procurement_pool: ProcurementPoolRecord;
+  procurement_pool: ProcurementPoolRecord | null;
 }
 
 export interface MarketplaceCommodityItem {
@@ -103,29 +102,9 @@ export const publish_commodity_service = async (
     throw new AppError('Gagal memperbarui status komoditas ke marketplace', 500, 'PUBLISH_FAILED');
   }
 
-  // Buatkan atau hubungkan Procurement Pool aktif untuk komoditas ini
+  // Hubungkan Procurement Pool aktif jika sudah ada yang dibuka oleh UMKM
   const active_pools = await find_active_pools_by_commodity_id(commodity_id);
-  let procurement_pool = active_pools[0];
-
-  if (!procurement_pool) {
-    const pool_expiry = new Date(commodity.closed_date);
-    const lead_time = commodity.lead_time_days || 1;
-    const target_delivery_str = commodity.closed_date;
-    const cutoff_ms = new Date(commodity.closed_date).getTime() - lead_time * 86400000;
-    const cutoff_date_str = new Date(cutoff_ms).toISOString().slice(0, 10);
-
-    procurement_pool = await insert_procurement_pool({
-      commodity_id,
-      target_moq: String(commodity.base_moq),
-      accumulated_qty: '0.00',
-      pool_status: 'OPEN',
-      locked_tier_price: String(commodity.base_price),
-      target_delivery_date: target_delivery_str,
-      cutoff_date: cutoff_date_str,
-      is_asap_allowed: true,
-      expires_at: pool_expiry,
-    });
-  }
+  const procurement_pool = (active_pools.length > 0 && active_pools[0]) ? active_pools[0] : null;
 
   return {
     commodity: updated_commodity,

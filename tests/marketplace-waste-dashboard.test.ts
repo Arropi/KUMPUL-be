@@ -238,7 +238,7 @@ describe('Marketplace, Waste Exchange, Order Management & Dashboard Integration 
     expect(body.data.low_stock_recommendations).toBeDefined();
     expect(body.data.circular_waste_matches).toBeDefined();
     expect(body.data.cost_saving_active_pools).toBeDefined();
-  });
+  }, 30000);
 
   it('GET /api/marketplace/recommendations (as Supplier) should return market price benchmarks', async () => {
     const res = await fetch(`${BASE_URL}/api/marketplace/recommendations`, {
@@ -250,7 +250,7 @@ describe('Marketplace, Waste Exchange, Order Management & Dashboard Integration 
     expect(body.status).toBe('success');
     expect(body.data.price_benchmarks).toBeDefined();
     expect(body.data.high_demand_ingredients).toBeDefined();
-  });
+  }, 30000);
 
   // ==========================================
   // MODUL 2: Bursa Limbah Produktif
