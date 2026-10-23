@@ -50,7 +50,7 @@ export const get_marketplace_commodity_detail_service = async (
   return commodity;
 };
 
-import { gemini_client, DEFAULT_GEMINI_MODEL } from '../../config/gemini.ts';
+import { gemini_client, DEFAULT_GEMINI_MODEL, GEMINI_FALLBACK_MODELS } from '../../config/gemini.ts';
 
 /**
  * Fungsi analisis rekomendasi bertenaga Google Gemini AI.
@@ -70,11 +70,20 @@ ${JSON.stringify(candidate_commodities.slice(0, 5))}
 Konteks Kebutuhan: ${JSON.stringify(user_context)}
 Berikan panduan kurasi pengadaan 1 kalimat singkat.`;
 
-    const response = await gemini_client.models.generateContent({
-      model: DEFAULT_GEMINI_MODEL,
-      contents: prompt,
-    });
-    return response?.text || null;
+    for (const model_name of GEMINI_FALLBACK_MODELS) {
+      try {
+        const response = await gemini_client.models.generateContent({
+          model: model_name,
+          contents: prompt,
+        });
+        if (response?.text) {
+          return response.text;
+        }
+      } catch {
+        // Lanjutkan ke model fallback berikutnya jika model ini 503/terkendala
+      }
+    }
+    return null;
   } catch (error) {
     console.warn('[Google AI Recommendation]: Gagal memproses AI insight:', error);
     return null;
