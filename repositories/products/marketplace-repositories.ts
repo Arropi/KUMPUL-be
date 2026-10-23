@@ -387,6 +387,40 @@ export const find_umkm_low_stock_records = async (umkm_role_id: string) => {
   }));
 };
 
+export function extract_search_keywords(names: string[]): string[] {
+  const synonyms: Record<string, string[]> = {
+    cabe: ['cabe', 'cabai'],
+    cabai: ['cabe', 'cabai'],
+    ayam: ['ayam'],
+    minyak: ['minyak'],
+    beras: ['beras'],
+    bawang: ['bawang'],
+    kopi: ['kopi'],
+    kedelai: ['kedelai'],
+    bebek: ['bebek'],
+    telur: ['telur', 'telor'],
+    gula: ['gula'],
+    tepung: ['tepung'],
+    ikan: ['ikan'],
+    susu: ['susu'],
+    daging: ['daging'],
+  };
+  const ignored = new Set(['fillet', 'mentah', 'segar', 'super', 'grade', 'pack', 'biji', 'curah', 'pilihan']);
+
+  const keywords = new Set<string>();
+  for (const name of names) {
+    const words = name.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length >= 3 && !ignored.has(w));
+    for (const w of words) {
+      if (synonyms[w]) {
+        synonyms[w].forEach((s) => keywords.add(s));
+      } else {
+        keywords.add(w);
+      }
+    }
+  }
+  return Array.from(keywords);
+}
+
 export const find_matching_commodities_by_names = async (
   ingredient_names: string[],
   exclude_role_id?: string | null,
@@ -395,15 +429,17 @@ export const find_matching_commodities_by_names = async (
 ) => {
   if (ingredient_names.length === 0) return [];
 
-  const name_clauses = ingredient_names.map((name) =>
-    ilike(supplier_commodities.name, `%${name}%`)
+  const keywords = extract_search_keywords(ingredient_names);
+  const search_terms = Array.from(new Set([...ingredient_names, ...keywords]));
+
+  const name_clauses = search_terms.map((term) =>
+    ilike(supplier_commodities.name, `%${term}%`)
   );
 
   const conditions = [
     eq(supplier_commodities.is_marketplace_active, true),
     or(...name_clauses)!,
   ];
-
   if (exclude_role_id) {
     conditions.push(ne(supplier_commodities.supplier_role_id, exclude_role_id));
   }

@@ -7,6 +7,7 @@ import {
   find_marketplace_commodities,
   find_marketplace_commodity_by_id,
   find_matching_commodities_by_names,
+  extract_search_keywords,
   find_nearest_suppliers_commodities,
   find_popular_recipe_ingredients,
   find_umkm_low_stock_records,
@@ -116,10 +117,15 @@ export const get_marketplace_recommendations_service = async (
   );
 
   const low_stock_recommendations = low_stocks.map((stock) => {
+    const stock_keywords = extract_search_keywords([stock.ingredient_name]);
     const matched = matching_commodities
-      .filter((c) =>
-        c.name.toLowerCase().includes(stock.ingredient_name.toLowerCase())
-      )
+      .filter((c) => {
+        const c_lower = c.name.toLowerCase();
+        return (
+          c_lower.includes(stock.ingredient_name.toLowerCase()) ||
+          stock_keywords.some((kw) => c_lower.includes(kw))
+        );
+      })
       .map((c) => ({
         commodity_id: c.id,
         commodity_name: c.name,
