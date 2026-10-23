@@ -1,5 +1,5 @@
 import { Type } from '@google/genai';
-import { gemini_client, DEFAULT_GEMINI_MODEL, GEMINI_API_KEY } from '../../config/gemini.ts';
+import { gemini_client, DEFAULT_GEMINI_MODEL, GEMINI_FALLBACK_MODELS, GEMINI_API_KEY } from '../../config/gemini.ts';
 import type { DocumentVerificationResult, VerifyDocumentInput } from '../../types/ai-verification-types.ts';
 import { aiDocumentCache } from '../../utils/cache-utils.ts';
 
@@ -80,85 +80,97 @@ ${supplier_name ? `Nama Usaha Supplier: ${supplier_name}` : ''}
 Silakan analisis apakah dokumen ini valid secara kebersihan atau legalitas usaha, dan pastikan masa berlakunya masih aktif per hari ini (${current_date_str}).`,
     });
 
-    const response = await gemini_client.models.generateContent({
-      model: DEFAULT_GEMINI_MODEL,
-      contents,
-      config: {
-        systemInstruction: system_instruction,
-        responseMimeType: 'application/json',
-        responseJsonSchema: {
-          type: Type.OBJECT,
-          properties: {
-            is_verified: {
-              type: Type.BOOLEAN,
-              description: 'True jika dokumen sah secara kebersihan atau legalitas dan belum kadaluarsa',
-            },
-            document_type: {
-              type: Type.STRING,
-              description: 'Tipe dokumen (e.g. SERTIFIKAT_HALAL, HACCP, BPOM_MD, PIRT, NIB, UJI_LAB, TIDAK_VALID)',
-            },
-            document_number: {
-              type: Type.STRING,
-              description: 'Nomor registrasi/sertifikat resmi dokumen jika ditemukan',
-            },
-            issuer: {
-              type: Type.STRING,
-              description: 'Lembaga atau instansi resmi yang menerbitkan dokumen',
-            },
-            expiration_date: {
-              type: Type.STRING,
-              description: 'Tanggal kadaluarsa dokumen dalam format YYYY-MM-DD, atau kosong jika seumur hidup',
-            },
-            is_expired: {
-              type: Type.BOOLEAN,
-              description: 'True jika tanggal kadaluarsa dokumen sudah lewat dari hari ini',
-            },
-            hygiene_compliance: {
-              type: Type.BOOLEAN,
-              description: 'True jika dokumen membuktikan standar kebersihan/mutu pangan',
-            },
-            legal_compliance: {
-              type: Type.BOOLEAN,
-              description: 'True jika dokumen membuktikan legalitas usaha supplier',
-            },
-            analysis_summary: {
-              type: Type.STRING,
-              description: 'Penjelasan ringkas hasil verifikasi dalam bahasa Indonesia',
-            },
-            rejection_reason: {
-              type: Type.STRING,
-              description: 'Alasan penolakan jika is_verified bernilai false',
+    let last_model_error: unknown = null;
+
+    for (const model_name of GEMINI_FALLBACK_MODELS) {
+      try {
+        const response = await gemini_client.models.generateContent({
+          model: model_name,
+          contents,
+          config: {
+            systemInstruction: system_instruction,
+            responseMimeType: 'application/json',
+            responseJsonSchema: {
+              type: Type.OBJECT,
+              properties: {
+                is_verified: {
+                  type: Type.BOOLEAN,
+                  description: 'True jika dokumen sah secara kebersihan atau legalitas dan belum kadaluarsa',
+                },
+                document_type: {
+                  type: Type.STRING,
+                  description: 'Tipe dokumen (e.g. SERTIFIKAT_HALAL, HACCP, BPOM_MD, PIRT, NIB, UJI_LAB, TIDAK_VALID)',
+                },
+                document_number: {
+                  type: Type.STRING,
+                  description: 'Nomor registrasi/sertifikat resmi dokumen jika ditemukan',
+                },
+                issuer: {
+                  type: Type.STRING,
+                  description: 'Lembaga atau instansi resmi yang menerbitkan dokumen',
+                },
+                expiration_date: {
+                  type: Type.STRING,
+                  description: 'Tanggal kadaluarsa dokumen dalam format YYYY-MM-DD, atau kosong jika seumur hidup',
+                },
+                is_expired: {
+                  type: Type.BOOLEAN,
+                  description: 'True jika tanggal kadaluarsa dokumen sudah lewat dari hari ini',
+                },
+                hygiene_compliance: {
+                  type: Type.BOOLEAN,
+                  description: 'True jika dokumen membuktikan standar kebersihan/mutu pangan',
+                },
+                legal_compliance: {
+                  type: Type.BOOLEAN,
+                  description: 'True jika dokumen membuktikan legalitas usaha supplier',
+                },
+                analysis_summary: {
+                  type: Type.STRING,
+                  description: 'Penjelasan ringkas hasil verifikasi dalam bahasa Indonesia',
+                },
+                rejection_reason: {
+                  type: Type.STRING,
+                  description: 'Alasan penolakan jika is_verified bernilai false',
+                },
+              },
+              required: [
+                'is_verified',
+                'document_type',
+                'is_expired',
+                'hygiene_compliance',
+                'legal_compliance',
+                'analysis_summary',
+              ],
             },
           },
-          required: [
-            'is_verified',
-            'document_type',
-            'is_expired',
-            'hygiene_compliance',
-            'legal_compliance',
-            'analysis_summary',
-          ],
-        },
-      },
-    });
+        });
 
-    const response_text = response.text;
-    if (!response_text) {
-      throw new Error('Gemini AI tidak mengembalikan output analisis yang valid.');
-    }
+        const response_text = response.text;
+        if (!response_text) {
+          throw new Error(`Model ${model_name} tidak mengembalikan output analisis yang valid.`);
+        }
 
-    const parsed_result = JSON.parse(response_text) as DocumentVerificationResult;
+        const parsed_result = JSON.parse(response_text) as DocumentVerificationResult;
 
-    // Proteksi ekstra: pastikan jika kadaluarsa, is_verified wajib false
-    if (parsed_result.is_expired) {
-      parsed_result.is_verified = false;
-      if (!parsed_result.rejection_reason) {
-        parsed_result.rejection_reason = 'DOKUMEN_KADALUARSA';
+        // Proteksi ekstra: pastikan jika kadaluarsa, is_verified wajib false
+        if (parsed_result.is_expired) {
+          parsed_result.is_verified = false;
+          if (!parsed_result.rejection_reason) {
+            parsed_result.rejection_reason = 'DOKUMEN_KADALUARSA';
+          }
+        }
+
+        aiDocumentCache.set(file_url, parsed_result);
+        return parsed_result;
+      } catch (model_err) {
+        last_model_error = model_err;
+        const errMsg = model_err instanceof Error ? model_err.message : String(model_err);
+        console.warn(`[Gemini AI]: Model ${model_name} terkendala (${errMsg.slice(0, 100)}). Mencoba model fallback berikutnya...`);
       }
     }
 
-    aiDocumentCache.set(file_url, parsed_result);
-    return parsed_result;
+    throw last_model_error || new Error('Seluruh model AI Gemini mengalami kendala.');
   } catch (error: any) {
     console.error('[Gemini AI Document Verification Error]:', error);
     return {

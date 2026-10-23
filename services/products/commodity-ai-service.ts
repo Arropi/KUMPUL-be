@@ -1,6 +1,12 @@
 import type { QualityVerificationResultDTO } from '../../types/commodity-batch-tag-types.ts';
 
-const GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-flash-latest'];
+const GEMINI_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash',
+  'gemini-3.8-flash',
+];
 
 /**
  * Memvalidasi dokumen pendukung mutu (sertifikat, legalitas, kebersihan, tanggal expired)

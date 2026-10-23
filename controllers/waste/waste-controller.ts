@@ -18,6 +18,10 @@ import {
   find_entity_by_auth_user_id,
   find_roles_by_entity_id,
 } from '../../repositories/profile/profile-repositories.ts';
+import {
+  predict_waste_price_with_ai,
+  type WastePricePredictionInput,
+} from '../../services/waste/waste-ai-service.ts';
 
 export const create_waste_listing = async (
   req: Request,
@@ -282,6 +286,33 @@ export const deposit_waste_to_bank_sampah = async (
       status: 'success',
       message: 'Penjualan ke Bank Sampah berhasil dicatat dan mempengaruhi pendapatan kas limbah',
       data: result,
+    });
+  } catch (controller_error) {
+    next(controller_error);
+  }
+};
+
+export const predict_waste_price_recommendation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const input: WastePricePredictionInput = {
+      title: req.body.title || '',
+      category: req.body.category,
+      volume: req.body.volume !== undefined ? Number(req.body.volume) : undefined,
+      unit: req.body.unit,
+      description: req.body.description,
+      expiry_date: req.body.expiry_date,
+    };
+
+    const recommendation = await predict_waste_price_with_ai(input);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Rekomendasi harga pasar wajar AI berhasil dihitung',
+      data: recommendation,
     });
   } catch (controller_error) {
     next(controller_error);

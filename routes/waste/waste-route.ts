@@ -10,6 +10,7 @@ import {
   get_waste_listing_detail,
   get_waste_listings,
   refer_listing_to_offtaker,
+  predict_waste_price_recommendation,
 } from '../../controllers/waste/waste-controller.ts';
 import { authenticate_jwt, authenticate_optional_jwt } from '../../middleware/auth-middleware.ts';
 import {
@@ -106,6 +107,39 @@ router.get(
   },
   get_nearest_offtakers
 );
+
+/**
+ * @swagger
+ * /api/waste-listings/ai/price-recommendation:
+ *   post:
+ *     summary: Estimasi harga pasar wajar dan valuasi ekonomi sirkular limbah berbasis Gemini AI
+ *     tags: [Waste Exchange]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               volume:
+ *                 type: number
+ *               unit:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               expiry_date:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Rekomendasi harga wajar AI berhasil diperoleh
+ */
+router.post('/ai/price-recommendation', predict_waste_price_recommendation);
 
 /**
  * @swagger
