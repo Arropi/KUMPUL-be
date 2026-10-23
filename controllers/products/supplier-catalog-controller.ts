@@ -188,7 +188,11 @@ export const publish_supplier_commodity = async (
 ): Promise<void> => {
   try {
     const commodity_id = req.params.id as string;
-    const publish_result = await publish_commodity_service(commodity_id);
+    const { production_date, closed_date } = req.body || {};
+    const publish_result = await publish_commodity_service(commodity_id, {
+      production_date,
+      closed_date,
+    });
 
     res.status(200).json({
       status: 'success',

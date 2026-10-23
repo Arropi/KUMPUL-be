@@ -49,13 +49,24 @@ export interface MarketplaceCommodityItem {
  * Mempublikasikan komoditas ke Marketplace publik setelah memeriksa tanggal panen, batas tutup, dan mutu
  */
 export const publish_commodity_service = async (
-  commodity_id: string
+  commodity_id: string,
+  options?: { production_date?: string | null; closed_date?: string | null }
 ): Promise<PublishCommodityResponse> => {
-  const commodity = await find_commodity_by_id(commodity_id);
+  let commodity = await find_commodity_by_id(commodity_id);
   if (!commodity) {
     throw new AppError('Komoditas katalog tidak ditemukan', 404, 'COMMODITY_NOT_FOUND');
   }
 
+  // Perbarui tanggal produksi/panen dan tanggal expired jika dikirim langsung pada saat publikasi
+  if (options?.production_date || options?.closed_date) {
+    const updated = await update_commodity_by_id(commodity_id, {
+      ...(options.production_date ? { production_date: options.production_date } : {}),
+      ...(options.closed_date ? { closed_date: options.closed_date } : {}),
+    });
+    if (updated) {
+      commodity = updated;
+    }
+  }
   // Validasi tanggal produksi/panen dan tanggal tutup/expired
   if (!commodity.production_date) {
     throw new AppError(
