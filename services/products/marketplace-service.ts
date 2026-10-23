@@ -17,16 +17,27 @@ import type {
   SupplierRecommendationResponse,
   UMKMRecommendationResponse,
 } from '../../types/marketplace-types.ts';
+import { marketplaceCache } from '../../utils/cache-utils.ts';
 
 export const get_marketplace_catalog_service = async (
   filter: MarketplaceFilterDTO
 ): Promise<MarketplaceCommodityItem[]> => {
-  return await find_marketplace_commodities(filter);
+  const cache_key = `catalog_${JSON.stringify(filter)}`;
+  if (marketplaceCache.has(cache_key)) {
+    return marketplaceCache.get(cache_key);
+  }
+  const result = await find_marketplace_commodities(filter);
+  marketplaceCache.set(cache_key, result);
+  return result;
 };
 
 export const get_marketplace_commodity_detail_service = async (
   commodity_id: string
 ): Promise<MarketplaceCommodityItem> => {
+  const cache_key = `commodity_detail_${commodity_id}`;
+  if (marketplaceCache.has(cache_key)) {
+    return marketplaceCache.get(cache_key);
+  }
   const commodity = await find_marketplace_commodity_by_id(commodity_id);
   if (!commodity) {
     throw new AppError(
@@ -35,6 +46,7 @@ export const get_marketplace_commodity_detail_service = async (
       'COMMODITY_NOT_FOUND'
     );
   }
+  marketplaceCache.set(cache_key, commodity);
   return commodity;
 };
 

@@ -1,6 +1,7 @@
 import { Type } from '@google/genai';
 import { gemini_client, DEFAULT_GEMINI_MODEL, GEMINI_API_KEY } from '../../config/gemini.ts';
 import type { DocumentVerificationResult, VerifyDocumentInput } from '../../types/ai-verification-types.ts';
+import { aiDocumentCache } from '../../utils/cache-utils.ts';
 
 /**
  * Memverifikasi dokumen pendukung supplier (kebersihan, keamanan pangan, atau legalitas usaha)
@@ -11,6 +12,9 @@ export const verify_supplier_document_service = async (
 ): Promise<DocumentVerificationResult> => {
   const { file_url, commodity_name, supplier_name } = input;
 
+  if (file_url && aiDocumentCache.has(file_url)) {
+    return aiDocumentCache.get(file_url);
+  }
   if (!file_url || typeof file_url !== 'string' || file_url.trim() === '') {
     return {
       is_verified: false,
@@ -153,6 +157,7 @@ Silakan analisis apakah dokumen ini valid secara kebersihan atau legalitas usaha
       }
     }
 
+    aiDocumentCache.set(file_url, parsed_result);
     return parsed_result;
   } catch (error: any) {
     console.error('[Gemini AI Document Verification Error]:', error);
