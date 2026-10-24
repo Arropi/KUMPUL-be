@@ -116,17 +116,7 @@ export const create_supplier_commodity_service = async (
     throw new AppError('base_moq harus bernilai angka lebih besar dari 0', 400, 'INVALID_BASE_MOQ');
   }
 
-  let formatted_under_moq_price: string | null = null;
-  if (payload.allows_under_moq) {
-    if (!payload.under_moq_price_per_kg) {
-      throw new AppError('under_moq_price_per_kg wajib diisi jika allows_under_moq bernilai true', 400, 'MISSING_UNDER_MOQ_PRICE');
-    }
-    const numeric_under_moq_price = parseFloat(String(payload.under_moq_price_per_kg));
-    if (isNaN(numeric_under_moq_price) || numeric_under_moq_price <= 0) {
-      throw new AppError('under_moq_price_per_kg harus bernilai angka lebih besar dari 0', 400, 'INVALID_UNDER_MOQ_PRICE');
-    }
-    formatted_under_moq_price = String(numeric_under_moq_price);
-  }
+  const formatted_under_moq_price: string | null = null;
 
   let initial_marketplace_active = payload.is_marketplace_active ?? false;
   if (payload.auto_activate_marketplace && payload.production_date) {
@@ -157,8 +147,8 @@ export const create_supplier_commodity_service = async (
     production_date: payload.production_date ? payload.production_date : null,
     closed_date: payload.closed_date ? payload.closed_date : null,
     auto_activate_marketplace: payload.auto_activate_marketplace ?? false,
-    allows_under_moq: payload.allows_under_moq ?? false,
-    under_moq_price_per_kg: formatted_under_moq_price,
+    allows_under_moq: false,
+    under_moq_price_per_kg: null,
     is_marketplace_active: initial_marketplace_active,
   };
 
@@ -259,19 +249,7 @@ export const update_supplier_commodity_service = async (
     throw new AppError('Komoditas katalog supplier tidak ditemukan', 404, 'COMMODITY_NOT_FOUND');
   }
 
-  let formatted_under_moq_price: string | null | undefined = undefined;
-  const target_allows_under_moq = payload.allows_under_moq ?? existing_item.allows_under_moq;
-  if (target_allows_under_moq) {
-    if (payload.under_moq_price_per_kg !== undefined) {
-      const parsed_price = parseFloat(String(payload.under_moq_price_per_kg));
-      if (isNaN(parsed_price) || parsed_price <= 0) {
-        throw new AppError('under_moq_price_per_kg harus bernilai lebih dari 0', 400, 'INVALID_UNDER_MOQ_PRICE');
-      }
-      formatted_under_moq_price = String(parsed_price);
-    }
-  } else if (payload.allows_under_moq === false) {
-    formatted_under_moq_price = null;
-  }
+  const formatted_under_moq_price: string | null = null;
 
   const update_payload = {
     ...(payload.name ? { name: payload.name.trim() } : {}),
@@ -285,8 +263,8 @@ export const update_supplier_commodity_service = async (
     ...(payload.production_date !== undefined ? { production_date: payload.production_date } : {}),
     ...(payload.closed_date !== undefined ? { closed_date: payload.closed_date } : {}),
     ...(payload.auto_activate_marketplace !== undefined ? { auto_activate_marketplace: payload.auto_activate_marketplace } : {}),
-    ...(payload.allows_under_moq !== undefined ? { allows_under_moq: payload.allows_under_moq } : {}),
-    ...(formatted_under_moq_price !== undefined ? { under_moq_price_per_kg: formatted_under_moq_price } : {}),
+    allows_under_moq: false,
+    under_moq_price_per_kg: null,
     ...(payload.is_marketplace_active !== undefined ? { is_marketplace_active: payload.is_marketplace_active } : {}),
   };
 
